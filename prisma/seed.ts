@@ -1,13 +1,12 @@
 import "dotenv/config";
-import bcrypt from "bcryptjs";
-
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import bcrypt from "bcryptjs";
 
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL no está definida");
+  throw new Error("DATABASE_URL no está configurada");
 }
 
 const adapter = new PrismaPg({
@@ -19,55 +18,61 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const adminEmail = "admin@tattoodesk.local";
-  const adminPassword = "CambiarEstaPassword123!";
+  const password = await bcrypt.hash("TattooDesk123!", 12);
 
-  const usuarioExistente = await prisma.usuario.findUnique({
+  const estudio = await prisma.estudio.upsert({
     where: {
-      email: adminEmail,
+      id: 1,
+    },
+    update: {},
+    create: {
+      nombre: "Mi Estudio de Tatuajes",
     },
   });
 
-  if (usuarioExistente) {
-    console.log("El administrador ya existe.");
-    console.log("Email:", usuarioExistente.email);
-    console.log("Estudio ID:", usuarioExistente.estudioId);
+  const usuario = await prisma.usuario.upsert({
+    where: {
+      email: "admin@tattoodesk.local",
+    },
+    update: {},
+    create: {
+      nombre: "Administrador",
+      email: "admin@tattoodesk.local",
+      password,
+      rol: "ADMIN",
+      estudioId: estudio.id,
+    },
+  });
 
-    return;
+  const clienteExistente = await prisma.cliente.findFirst({
+    where: {
+      estudioId: estudio.id,
+      telefono: "6860000000",
+    },
+  });
+
+  if (!clienteExistente) {
+    const cliente = await prisma.cliente.create({
+      data: {
+        nombre: "Cliente de Prueba",
+        telefono: "6860000000",
+        email: "cliente@prueba.local",
+        estudioId: estudio.id,
+      },
+    });
+
+    console.log("Cliente creado:", cliente.nombre);
+  } else {
+    console.log("El cliente de prueba ya existe.");
   }
 
-  const password = await bcrypt.hash(adminPassword, 12);
-
-  const estudio = await prisma.estudio.create({
-    data: {
-      nombre: "Mi Estudio de Tatuajes",
-      email: adminEmail,
-
-      usuarios: {
-        create: {
-          nombre: "Administrador",
-          email: adminEmail,
-          password,
-          rol: "ADMIN",
-        },
-      },
-    },
-
-    include: {
-      usuarios: true,
-    },
-  });
-
-  console.log("Estudio creado:", estudio.nombre);
-  console.log(
-    "Administrador creado:",
-    estudio.usuarios[0]?.email,
-  );
+  console.log("Administrador:", usuario.email);
+  console.log("Estudio ID:", estudio.id);
 }
 
 main()
   .catch((error) => {
-    console.error("Error ejecutando seed:", error);
+    console.error(error);
     process.exit(1);
   })
   .finally(async () => {
