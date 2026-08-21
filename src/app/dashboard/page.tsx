@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -11,7 +12,12 @@ export default async function DashboardPage() {
 
   const estudioId = session.user.estudioId;
 
-  const [clientes, citas, ingresos, pendientes] = await Promise.all([
+  const [
+    clientes,
+    citasPendientes,
+    ingresos,
+    gastos,
+  ] = await Promise.all([
     prisma.cliente.count({
       where: {
         estudioId,
@@ -34,15 +40,25 @@ export default async function DashboardPage() {
       },
     }),
 
-    prisma.cita.count({
+    prisma.gasto.aggregate({
       where: {
         estudioId,
-        estado: "PENDIENTE",
+      },
+      _sum: {
+        monto: true,
       },
     }),
   ]);
 
-  const totalIngresos = Number(ingresos._sum.monto ?? 0);
+  const totalIngresos = Number(
+    ingresos._sum.monto ?? 0
+  );
+
+  const totalGastos = Number(
+    gastos._sum.monto ?? 0
+  );
+
+  const utilidad = totalIngresos - totalGastos;
 
   return (
     <main className="min-h-screen bg-muted/40 p-6">
@@ -61,7 +77,7 @@ export default async function DashboardPage() {
           </p>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <DashboardCard
             titulo="Clientes"
             valor={clientes.toString()}
@@ -69,32 +85,104 @@ export default async function DashboardPage() {
 
           <DashboardCard
             titulo="Citas pendientes"
-            valor={citas.toString()}
+            valor={citasPendientes.toString()}
           />
 
           <DashboardCard
             titulo="Ingresos"
-            valor={`$${totalIngresos.toFixed(2)}`}
+            valor={formatoMoneda(totalIngresos)}
           />
 
           <DashboardCard
-            titulo="Pendientes"
-            valor={pendientes.toString()}
+            titulo="Gastos"
+            valor={formatoMoneda(totalGastos)}
           />
+
+          <DashboardCard
+            titulo="Utilidad"
+            valor={formatoMoneda(utilidad)}
+          />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-xl font-semibold">
+            Accesos rápidos
+          </h2>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <MenuCard
+              titulo="Clientes"
+              descripcion="Gestionar clientes"
+              href="/clientes"
+            />
+
+            <MenuCard
+              titulo="Citas"
+              descripcion="Agenda del estudio"
+              href="/citas"
+            />
+
+            <MenuCard
+              titulo="Tatuajes"
+              descripcion="Diseños y trabajos"
+              href="/tatuajes"
+            />
+
+            <MenuCard
+              titulo="Pagos"
+              descripcion="Ingresos registrados"
+              href="/pagos"
+            />
+
+            <MenuCard
+              titulo="Gastos"
+              descripcion="Control financiero"
+              href="/gastos"
+            />
+          </div>
         </section>
 
         <section className="rounded-xl border bg-background p-6">
           <h2 className="text-lg font-semibold">
-            Resumen del estudio
+            Resumen financiero
           </h2>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            Estos indicadores están conectados directamente con
-            PostgreSQL mediante Prisma.
+            Ingresos menos gastos del estudio.
           </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <Resumen
+              titulo="Ingresos"
+              valor={formatoMoneda(totalIngresos)}
+            />
+
+            <Resumen
+              titulo="Gastos"
+              valor={formatoMoneda(totalGastos)}
+            />
+
+            <Resumen
+              titulo="Utilidad"
+              valor={formatoMoneda(utilidad)}
+            />
+          </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function formatoMoneda(
+  cantidad: number
+) {
+  return cantidad.toLocaleString(
+    "es-MX",
+    {
+      style: "currency",
+      currency: "MXN",
+      minimumFractionDigits: 2,
+    }
   );
 }
 
@@ -112,6 +200,51 @@ function DashboardCard({
       </p>
 
       <p className="mt-2 text-2xl font-bold">
+        {valor}
+      </p>
+    </div>
+  );
+}
+
+function MenuCard({
+  titulo,
+  descripcion,
+  href,
+}: {
+  titulo: string;
+  descripcion: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-xl border bg-background p-5 transition hover:bg-muted"
+    >
+      <h3 className="font-semibold">
+        {titulo}
+      </h3>
+
+      <p className="mt-1 text-sm text-muted-foreground">
+        {descripcion}
+      </p>
+    </Link>
+  );
+}
+
+function Resumen({
+  titulo,
+  valor,
+}: {
+  titulo: string;
+  valor: string;
+}) {
+  return (
+    <div className="rounded-lg border p-4">
+      <p className="text-sm text-muted-foreground">
+        {titulo}
+      </p>
+
+      <p className="mt-2 text-xl font-semibold">
         {valor}
       </p>
     </div>
