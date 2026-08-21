@@ -1,0 +1,496 @@
+"use client";
+
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
+type InventarioItem = {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  categoria: string | null;
+  cantidad: string | number;
+  unidad: string | null;
+  minimo: string | number | null;
+  costo: string | number | null;
+  activo: boolean;
+  creadoEn: string;
+};
+
+export default function InventarioPage() {
+  const [items, setItems] =
+    useState<InventarioItem[]>([]);
+
+  const [cargando, setCargando] =
+    useState(true);
+
+  const [guardando, setGuardando] =
+    useState(false);
+
+  const [mostrarFormulario, setMostrarFormulario] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [nombre, setNombre] =
+    useState("");
+
+  const [descripcion, setDescripcion] =
+    useState("");
+
+  const [categoria, setCategoria] =
+    useState("");
+
+  const [cantidad, setCantidad] =
+    useState("");
+
+  const [unidad, setUnidad] =
+    useState("");
+
+  const [minimo, setMinimo] =
+    useState("");
+
+  const [costo, setCosto] =
+    useState("");
+
+
+  async function cargarInventario() {
+    try {
+      setCargando(true);
+      setError("");
+
+      const respuesta =
+        await fetch("/api/inventario");
+
+      const datos =
+        await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error ||
+          "No se pudo cargar el inventario."
+        );
+      }
+
+      setItems(datos);
+
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al cargar inventario."
+      );
+
+    } finally {
+      setCargando(false);
+    }
+  }
+
+
+  useEffect(() => {
+    cargarInventario();
+  }, []);
+
+
+  function limpiarFormulario() {
+    setNombre("");
+    setDescripcion("");
+    setCategoria("");
+    setCantidad("");
+    setUnidad("");
+    setMinimo("");
+    setCosto("");
+  }
+
+
+  async function crearItem(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    try {
+      setGuardando(true);
+      setError("");
+
+      const respuesta =
+        await fetch(
+          "/api/inventario",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              nombre,
+              descripcion,
+              categoria,
+              cantidad,
+              unidad,
+              minimo,
+              costo,
+            }),
+          }
+        );
+
+      const datos =
+        await respuesta.json();
+
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error ||
+          "No se pudo guardar."
+        );
+      }
+
+
+      setItems((actuales) => [
+        datos,
+        ...actuales,
+      ]);
+
+
+      limpiarFormulario();
+      setMostrarFormulario(false);
+
+
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al guardar."
+      );
+
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+
+  function formatoMoneda(
+    valor: string | number | null
+  ) {
+    return Number(
+      valor ?? 0
+    ).toLocaleString(
+      "es-MX",
+      {
+        style: "currency",
+        currency: "MXN",
+      }
+    );
+  }
+
+
+  function stockBajo(
+    item: InventarioItem
+  ) {
+    if (!item.minimo) {
+      return false;
+    }
+
+    return (
+      Number(item.cantidad) <=
+      Number(item.minimo)
+    );
+  }
+  return (
+  <main className="min-h-screen bg-muted/40 p-6">
+    <div className="mx-auto max-w-7xl space-y-6">
+
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Administración
+          </p>
+
+          <h1 className="text-3xl font-bold">
+            Inventario
+          </h1>
+        </div>
+
+        {!mostrarFormulario && (
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setMostrarFormulario(true);
+            }}
+            className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground"
+          >
+            Nuevo material
+          </button>
+        )}
+      </header>
+
+
+      {mostrarFormulario && (
+        <section className="rounded-xl border bg-background p-6">
+
+          <h2 className="mb-5 text-xl font-semibold">
+            Registrar material
+          </h2>
+
+
+          <form
+            onSubmit={crearItem}
+            className="space-y-5"
+          >
+
+            <div className="grid gap-4 md:grid-cols-2">
+
+              <input
+                placeholder="Nombre"
+                value={nombre}
+                onChange={(e) =>
+                  setNombre(e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+                required
+              />
+
+
+              <input
+                placeholder="Categoría"
+                value={categoria}
+                onChange={(e) =>
+                  setCategoria(e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+              />
+
+
+              <input
+                type="number"
+                placeholder="Cantidad"
+                value={cantidad}
+                onChange={(e) =>
+                  setCantidad(e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+                required
+              />
+
+
+              <input
+                placeholder="Unidad (ml, piezas, cajas)"
+                value={unidad}
+                onChange={(e) =>
+                  setUnidad(e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+              />
+
+
+              <input
+                type="number"
+                placeholder="Stock mínimo"
+                value={minimo}
+                onChange={(e) =>
+                  setMinimo(e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+              />
+
+
+              <input
+                type="number"
+                placeholder="Costo"
+                value={costo}
+                onChange={(e) =>
+                  setCosto(e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+              />
+
+            </div>
+
+
+            <textarea
+              placeholder="Descripción"
+              value={descripcion}
+              onChange={(e) =>
+                setDescripcion(e.target.value)
+              }
+              className="w-full rounded-lg border px-3 py-2"
+            />
+
+
+            {error && (
+              <div className="rounded-lg bg-red-50 p-3 text-red-700">
+                {error}
+              </div>
+            )}
+
+
+            <div className="flex justify-end gap-3">
+
+              <button
+                type="button"
+                onClick={() => {
+                  limpiarFormulario();
+                  setMostrarFormulario(false);
+                }}
+                className="rounded-lg border px-4 py-2"
+              >
+                Cancelar
+              </button>
+
+
+              <button
+                disabled={guardando}
+                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+              >
+                {guardando
+                  ? "Guardando..."
+                  : "Guardar material"}
+              </button>
+
+            </div>
+
+          </form>
+
+        </section>
+      )}
+
+
+
+      <section className="rounded-xl border bg-background">
+
+        {cargando ? (
+
+          <div className="p-6">
+            Cargando inventario...
+          </div>
+
+        ) : items.length === 0 ? (
+
+          <div className="p-6 text-muted-foreground">
+            No hay materiales registrados.
+          </div>
+
+        ) : (
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full">
+
+              <thead>
+                <tr className="border-b text-left text-sm">
+
+                  <th className="px-5 py-3">
+                    Material
+                  </th>
+
+                  <th className="px-5 py-3">
+                    Categoría
+                  </th>
+
+                  <th className="px-5 py-3">
+                    Cantidad
+                  </th>
+
+                  <th className="px-5 py-3">
+                    Costo
+                  </th>
+
+                  <th className="px-5 py-3">
+                    Estado
+                  </th>
+
+                </tr>
+              </thead>
+
+
+              <tbody>
+
+                {items.map((item) => (
+
+                  <tr
+                    key={item.id}
+                    className="border-b"
+                  >
+
+                    <td className="px-5 py-4">
+
+                      <p className="font-semibold">
+                        {item.nombre}
+                      </p>
+
+                      {item.descripcion && (
+                        <p className="text-sm text-muted-foreground">
+                          {item.descripcion}
+                        </p>
+                      )}
+
+                    </td>
+
+
+                    <td className="px-5 py-4">
+                      {item.categoria || "—"}
+                    </td>
+
+
+                    <td className="px-5 py-4">
+
+                      {Number(
+                        item.cantidad
+                      )}{" "}
+
+                      {item.unidad || ""}
+
+                    </td>
+
+
+                    <td className="px-5 py-4">
+                      {formatoMoneda(
+                        item.costo
+                      )}
+                    </td>
+
+
+                    <td className="px-5 py-4">
+
+                      {stockBajo(item) ? (
+
+                        <span className="rounded-full border px-3 py-1 text-sm">
+                          Stock bajo
+                        </span>
+
+                      ) : (
+
+                        <span className="text-sm">
+                          Disponible
+                        </span>
+
+                      )}
+
+                    </td>
+
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </section>
+
+    </div>
+  </main>
+);
+}
