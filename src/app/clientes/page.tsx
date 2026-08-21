@@ -2,6 +2,14 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+type Foto = {
+  id: number;
+  url: string;
+  descripcion: string | null;
+  tipo: string;
+  creadoEn: string;
+};
+
 type Pago = {
   id: number;
   monto: string | number;
@@ -19,6 +27,7 @@ type Tatuaje = {
   anticipo: string | number | null;
   estado: string;
   pagos: Pago[];
+  fotos: Foto[];
 };
 
 type Cliente = {
@@ -28,49 +37,70 @@ type Cliente = {
   email: string | null;
   instagram: string | null;
   creadoEn: string;
+  fotos: Foto[];
   tatuajes: Tatuaje[];
 };
 
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] =
+    useState<Cliente[]>([]);
+
   const [clienteAbierto, setClienteAbierto] =
     useState<number | null>(null);
 
-  const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
+  const [cargando, setCargando] =
+    useState(true);
+
+  const [guardando, setGuardando] =
+    useState(false);
+
   const [mostrarFormulario, setMostrarFormulario] =
     useState(false);
-  const [error, setError] = useState("");
 
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [email, setEmail] = useState("");
-  const [instagram, setInstagram] = useState("");
+  const [error, setError] =
+    useState("");
+
+  const [nombre, setNombre] =
+    useState("");
+
+  const [telefono, setTelefono] =
+    useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [instagram, setInstagram] =
+    useState("");
 
   async function cargarClientes() {
     try {
       setCargando(true);
       setError("");
 
-      const respuesta = await fetch("/api/clientes");
-      const datos = await respuesta.json();
+      const respuesta =
+        await fetch("/api/clientes");
+
+      const datos =
+        await respuesta.json();
 
       if (!respuesta.ok) {
         throw new Error(
           datos.error ||
-            "No se pudieron cargar los clientes."
+          "No se pudieron cargar los clientes."
         );
       }
 
       setClientes(datos);
+
     } catch (error) {
       console.error(error);
 
       setError(
         error instanceof Error
           ? error.message
-          : "No se pudieron cargar los clientes."
+          : "Error al cargar clientes."
       );
+
     } finally {
       setCargando(false);
     }
@@ -92,9 +122,12 @@ export default function ClientesPage() {
   ) {
     event.preventDefault();
 
-    if (!nombre.trim() || !telefono.trim()) {
+    if (
+      !nombre.trim() ||
+      !telefono.trim()
+    ) {
       setError(
-        "El nombre y el teléfono son obligatorios."
+        "El nombre y teléfono son obligatorios."
       );
       return;
     }
@@ -103,9 +136,8 @@ export default function ClientesPage() {
       setGuardando(true);
       setError("");
 
-      const respuesta = await fetch(
-        "/api/clientes",
-        {
+      const respuesta =
+        await fetch("/api/clientes", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -116,15 +148,15 @@ export default function ClientesPage() {
             email,
             instagram,
           }),
-        }
-      );
+        });
 
-      const datos = await respuesta.json();
+      const datos =
+        await respuesta.json();
 
       if (!respuesta.ok) {
         setError(
           datos.error ||
-            "No se pudo crear el cliente."
+          "No se pudo crear el cliente."
         );
         return;
       }
@@ -136,14 +168,16 @@ export default function ClientesPage() {
 
       limpiarFormulario();
       setMostrarFormulario(false);
+
     } catch (error) {
       console.error(error);
 
       setError(
         error instanceof Error
           ? error.message
-          : "Ocurrió un error al crear el cliente."
+          : "Error al crear cliente."
       );
+
     } finally {
       setGuardando(false);
     }
@@ -163,16 +197,19 @@ export default function ClientesPage() {
     precio: string | number | null,
     pagos: Pago[]
   ) {
-    const total = Number(precio ?? 0);
-    const pagado = calcularTotalPagado(pagos);
-
-    return Math.max(total - pagado, 0);
+    return Math.max(
+      Number(precio ?? 0) -
+      calcularTotalPagado(pagos),
+      0
+    );
   }
 
   function formatoMoneda(
     cantidad: string | number
   ) {
-    return Number(cantidad).toLocaleString(
+    return Number(
+      cantidad
+    ).toLocaleString(
       "es-MX",
       {
         style: "currency",
@@ -182,7 +219,9 @@ export default function ClientesPage() {
     );
   }
 
-  function nombreMetodo(metodo: string) {
+  function nombreMetodo(
+    metodo: string
+  ) {
     switch (metodo) {
       case "EFECTIVO":
         return "Efectivo";
@@ -197,10 +236,10 @@ export default function ClientesPage() {
         return "Otro";
     }
   }
-
   return (
     <main className="min-h-screen bg-muted/40 p-6">
       <div className="mx-auto max-w-7xl space-y-6">
+
         <header className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm text-muted-foreground">
@@ -226,178 +265,135 @@ export default function ClientesPage() {
           )}
         </header>
 
+
         {mostrarFormulario && (
           <section className="rounded-xl border bg-background p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold">
-                Nuevo cliente
-              </h2>
 
-              <p className="text-sm text-muted-foreground">
-                Registra los datos básicos del cliente.
-              </p>
-            </div>
+            <h2 className="mb-5 text-xl font-semibold">
+              Nuevo cliente
+            </h2>
 
             <form
               onSubmit={crearCliente}
               className="space-y-5"
             >
+
               <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Nombre *
-                  </label>
 
-                  <input
-                    type="text"
-                    value={nombre}
-                    onChange={(event) =>
-                      setNombre(event.target.value)
-                    }
-                    placeholder="Nombre completo"
-                    required
-                    className="w-full rounded-lg border bg-background px-3 py-2"
-                  />
-                </div>
+                <input
+                  placeholder="Nombre"
+                  value={nombre}
+                  onChange={(e) =>
+                    setNombre(e.target.value)
+                  }
+                  className="rounded-lg border px-3 py-2"
+                  required
+                />
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Teléfono *
-                  </label>
+                <input
+                  placeholder="Teléfono"
+                  value={telefono}
+                  onChange={(e) =>
+                    setTelefono(e.target.value)
+                  }
+                  className="rounded-lg border px-3 py-2"
+                  required
+                />
 
-                  <input
-                    type="tel"
-                    value={telefono}
-                    onChange={(event) =>
-                      setTelefono(event.target.value)
-                    }
-                    placeholder="6861234567"
-                    required
-                    className="w-full rounded-lg border bg-background px-3 py-2"
-                  />
-                </div>
+                <input
+                  placeholder="Correo"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                  className="rounded-lg border px-3 py-2"
+                />
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Correo electrónico
-                  </label>
+                <input
+                  placeholder="Instagram"
+                  value={instagram}
+                  onChange={(e) =>
+                    setInstagram(e.target.value)
+                  }
+                  className="rounded-lg border px-3 py-2"
+                />
 
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(event) =>
-                      setEmail(event.target.value)
-                    }
-                    placeholder="cliente@correo.com"
-                    className="w-full rounded-lg border bg-background px-3 py-2"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Instagram
-                  </label>
-
-                  <input
-                    type="text"
-                    value={instagram}
-                    onChange={(event) =>
-                      setInstagram(event.target.value)
-                    }
-                    placeholder="@usuario"
-                    className="w-full rounded-lg border bg-background px-3 py-2"
-                  />
-                </div>
               </div>
 
+
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="rounded-lg bg-red-50 p-3 text-red-700">
                   {error}
                 </div>
               )}
 
+
               <div className="flex justify-end gap-3">
+
                 <button
                   type="button"
                   onClick={() => {
                     limpiarFormulario();
                     setMostrarFormulario(false);
-                    setError("");
                   }}
-                  disabled={guardando}
-                  className="rounded-lg border px-4 py-2 font-medium"
+                  className="rounded-lg border px-4 py-2"
                 >
                   Cancelar
                 </button>
 
+
                 <button
-                  type="submit"
                   disabled={guardando}
-                  className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
                 >
                   {guardando
                     ? "Guardando..."
                     : "Guardar cliente"}
                 </button>
+
               </div>
+
             </form>
+
           </section>
         )}
 
-        {error && !mostrarFormulario && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+
 
         <section className="space-y-4">
+
           {cargando && (
-            <div className="rounded-xl border bg-background p-6 text-sm text-muted-foreground">
+            <div className="rounded-xl border bg-background p-6">
               Cargando clientes...
             </div>
           )}
 
-          {!cargando &&
-            clientes.length === 0 && (
-              <div className="rounded-xl border bg-background p-6 text-sm text-muted-foreground">
-                No hay clientes registrados.
-              </div>
-            )}
 
           {!cargando &&
             clientes.map((cliente) => (
+
               <article
                 key={cliente.id}
                 className="rounded-xl border bg-background p-5"
               >
-                <div className="flex items-center justify-between gap-4">
+
+                <div className="flex items-center justify-between">
+
                   <div>
                     <h2 className="text-xl font-semibold">
                       {cliente.nombre}
                     </h2>
 
-                    <p>{cliente.telefono}</p>
-
-                    {cliente.email && (
-                      <p className="text-sm text-muted-foreground">
-                        {cliente.email}
-                      </p>
-                    )}
-
-                    {cliente.instagram && (
-                      <p className="text-sm text-muted-foreground">
-                        {cliente.instagram}
-                      </p>
-                    )}
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {cliente.tatuajes.length}{" "}
-                      tatuaje
-                      {cliente.tatuajes.length === 1
-                        ? ""
-                        : "s"}
+                    <p>
+                      {cliente.telefono}
                     </p>
+
+                    <p className="text-sm text-muted-foreground">
+                      {cliente.tatuajes.length} tatuaje(s)
+                    </p>
+
                   </div>
+
 
                   <button
                     type="button"
@@ -414,23 +410,90 @@ export default function ClientesPage() {
                       ? "Cerrar ficha"
                       : "Ver ficha"}
                   </button>
+
                 </div>
 
+
+
                 {clienteAbierto === cliente.id && (
-                  <div className="mt-5 space-y-5 border-t pt-5">
-                    <div>
+
+                  <div className="mt-5 space-y-6 border-t pt-5">
+
+
+                    <section>
+
+                      <h3 className="text-lg font-semibold">
+                        Galería del cliente
+                      </h3>
+
+
+                      {cliente.fotos.length === 0 ? (
+
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          No hay fotos generales.
+                        </p>
+
+                      ) : (
+
+                        <div className="mt-3 grid gap-4 md:grid-cols-4">
+
+                          {cliente.fotos.map((foto) => (
+
+                            <div
+                              key={foto.id}
+                              className="overflow-hidden rounded-lg border"
+                            >
+
+                              <img
+                                src={foto.url}
+                                alt={
+                                  foto.descripcion ||
+                                  "Foto del cliente"
+                                }
+                                className="h-40 w-full object-cover"
+                              />
+
+                              <div className="p-3">
+
+                                <p className="font-medium">
+                                  {foto.tipo}
+                                </p>
+
+                                {foto.descripcion && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {foto.descripcion}
+                                  </p>
+                                )}
+
+                              </div>
+
+                            </div>
+
+                          ))}
+
+                        </div>
+
+                      )}
+
+                    </section>
+
+
+
+                    <section>
+
                       <h3 className="text-lg font-semibold">
                         Tatuajes
                       </h3>
-                    </div>
+                      {cliente.tatuajes.length === 0 ? (
 
-                    {cliente.tatuajes.length === 0 ? (
-                      <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-                        Este cliente todavía no tiene tatuajes registrados.
-                      </div>
-                    ) : (
-                      cliente.tatuajes.map(
-                        (tatuaje) => {
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          No hay tatuajes registrados.
+                        </p>
+
+                      ) : (
+
+                        cliente.tatuajes.map((tatuaje) => {
+
                           const totalPagado =
                             calcularTotalPagado(
                               tatuaje.pagos
@@ -442,38 +505,43 @@ export default function ClientesPage() {
                               tatuaje.pagos
                             );
 
+
                           return (
+
                             <div
                               key={tatuaje.id}
-                              className="rounded-xl border p-5"
+                              className="mt-5 rounded-xl border p-5"
                             >
-                              <div className="flex items-start justify-between gap-4">
+
+                              <div className="flex justify-between">
+
                                 <div>
+
                                   <h4 className="text-lg font-semibold">
                                     {tatuaje.nombre}
                                   </h4>
 
                                   <p className="text-sm">
-                                    Estado:{" "}
-                                    {tatuaje.estado}
+                                    Estado: {tatuaje.estado}
                                   </p>
 
                                   {tatuaje.estilo && (
                                     <p className="text-sm text-muted-foreground">
-                                      Estilo:{" "}
-                                      {tatuaje.estilo}
+                                      Estilo: {tatuaje.estilo}
                                     </p>
                                   )}
 
                                   {tatuaje.zona && (
                                     <p className="text-sm text-muted-foreground">
-                                      Zona:{" "}
-                                      {tatuaje.zona}
+                                      Zona: {tatuaje.zona}
                                     </p>
                                   )}
+
                                 </div>
 
+
                                 <div className="text-right">
+
                                   <p className="text-sm text-muted-foreground">
                                     Precio
                                   </p>
@@ -483,88 +551,169 @@ export default function ClientesPage() {
                                       tatuaje.precio ?? 0
                                     )}
                                   </p>
+
                                 </div>
+
                               </div>
 
+
+
                               <div className="mt-5 grid gap-3 md:grid-cols-3">
+
                                 <div className="rounded-lg border p-4">
                                   <p className="text-sm text-muted-foreground">
                                     Total pagado
                                   </p>
 
-                                  <p className="text-lg font-semibold">
+                                  <p className="font-semibold">
                                     {formatoMoneda(
                                       totalPagado
                                     )}
                                   </p>
                                 </div>
 
+
                                 <div className="rounded-lg border p-4">
                                   <p className="text-sm text-muted-foreground">
                                     Saldo pendiente
                                   </p>
 
-                                  <p className="text-lg font-semibold">
+                                  <p className="font-semibold">
                                     {formatoMoneda(
                                       saldo
                                     )}
                                   </p>
                                 </div>
 
+
                                 <div className="rounded-lg border p-4">
                                   <p className="text-sm text-muted-foreground">
-                                    Pagos registrados
+                                    Pagos
                                   </p>
 
-                                  <p className="text-lg font-semibold">
+                                  <p className="font-semibold">
                                     {tatuaje.pagos.length}
                                   </p>
                                 </div>
+
                               </div>
 
-                              <div className="mt-5">
+
+
+                              <div className="mt-6">
+
+                                <h5 className="font-semibold">
+                                  Fotos del tatuaje
+                                </h5>
+
+
+                                {tatuaje.fotos.length === 0 ? (
+
+                                  <p className="mt-2 text-sm text-muted-foreground">
+                                    No hay fotos del tatuaje.
+                                  </p>
+
+                                ) : (
+
+                                  <div className="mt-3 grid gap-4 md:grid-cols-4">
+
+                                    {tatuaje.fotos.map((foto) => (
+
+                                      <div
+                                        key={foto.id}
+                                        className="overflow-hidden rounded-lg border"
+                                      >
+
+                                        <img
+                                          src={foto.url}
+                                          alt={
+                                            foto.descripcion ||
+                                            "Foto tatuaje"
+                                          }
+                                          className="h-40 w-full object-cover"
+                                        />
+
+                                        <div className="p-2">
+
+                                          <p className="text-sm font-medium">
+                                            {foto.tipo}
+                                          </p>
+
+                                          {foto.descripcion && (
+                                            <p className="text-xs text-muted-foreground">
+                                              {foto.descripcion}
+                                            </p>
+                                          )}
+
+                                        </div>
+
+                                      </div>
+
+                                    ))}
+
+                                  </div>
+
+                                )}
+
+                              </div>
+
+
+
+                              <div className="mt-6">
+
                                 <h5 className="mb-3 font-semibold">
                                   Historial de pagos
                                 </h5>
 
-                                {tatuaje.pagos.length ===
-                                0 ? (
-                                  <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                                    No hay pagos registrados para este tatuaje.
+
+                                {tatuaje.pagos.length === 0 ? (
+
+                                  <p className="text-sm text-muted-foreground">
+                                    Sin pagos registrados.
                                   </p>
+
                                 ) : (
+
                                   <div className="overflow-x-auto">
+
                                     <table className="w-full">
+
                                       <thead>
+
                                         <tr className="border-b text-left text-sm">
-                                          <th className="px-3 py-3 font-medium">
+
+                                          <th className="px-3 py-2">
                                             Fecha
                                           </th>
 
-                                          <th className="px-3 py-3 font-medium">
+                                          <th className="px-3 py-2">
                                             Método
                                           </th>
 
-                                          <th className="px-3 py-3 font-medium">
+                                          <th className="px-3 py-2">
                                             Concepto
                                           </th>
 
-                                          <th className="px-3 py-3 text-right font-medium">
+                                          <th className="px-3 py-2 text-right">
                                             Monto
                                           </th>
+
                                         </tr>
+
                                       </thead>
 
+
                                       <tbody>
+
                                         {tatuaje.pagos.map(
                                           (pago) => (
+
                                             <tr
-                                              key={
-                                                pago.id
-                                              }
-                                              className="border-b last:border-0"
+                                              key={pago.id}
+                                              className="border-b"
                                             >
-                                              <td className="px-3 py-3">
+
+                                              <td className="px-3 py-2">
                                                 {new Date(
                                                   pago.fecha
                                                 ).toLocaleDateString(
@@ -572,40 +721,62 @@ export default function ClientesPage() {
                                                 )}
                                               </td>
 
-                                              <td className="px-3 py-3">
+
+                                              <td className="px-3 py-2">
                                                 {nombreMetodo(
                                                   pago.metodo
                                                 )}
                                               </td>
 
-                                              <td className="px-3 py-3">
-                                                {pago.concepto ||
-                                                  "—"}
+
+                                              <td className="px-3 py-2">
+                                                {pago.concepto || "—"}
                                               </td>
 
-                                              <td className="px-3 py-3 text-right font-semibold">
+
+                                              <td className="px-3 py-2 text-right font-semibold">
                                                 {formatoMoneda(
                                                   pago.monto
                                                 )}
                                               </td>
+
                                             </tr>
+
                                           )
                                         )}
+
                                       </tbody>
+
                                     </table>
+
                                   </div>
+
                                 )}
+
                               </div>
+
+
                             </div>
+
                           );
-                        }
-                      )
-                    )}
+
+                        })
+
+                      )}
+
+                    </section>
+
+
                   </div>
+
                 )}
+
               </article>
+
             ))}
+
         </section>
+
       </div>
     </main>
   );
