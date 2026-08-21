@@ -7,18 +7,19 @@ datasource db {
   provider = "postgresql"
 }
 
+
 // ========================================
 // ESTUDIOS
 // ========================================
 
 model Estudio {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  telefono    String?
-  email       String?
-  direccion   String?
-  creadoEn    DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  telefono       String?
+  email          String?
+  direccion      String?
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
 
   usuarios       Usuario[]
   clientes       Cliente[]
@@ -27,8 +28,10 @@ model Estudio {
   pagos          Pago[]
   gastos         Gasto[]
   inventarios    Inventario[]
+  movimientosInventario MovimientoInventario[]
   suscripcion    Suscripcion?
 }
+
 
 // ========================================
 // USUARIOS
@@ -51,9 +54,11 @@ model Usuario {
   tatuajes    Tatuaje[]
   pagos       Pago[]
   gastos      Gasto[]
+  movimientosInventario MovimientoInventario[]
 
   @@index([estudioId])
 }
+
 
 // ========================================
 // CLIENTES
@@ -85,32 +90,34 @@ model Cliente {
   @@unique([estudioId, telefono])
 }
 
+
 // ========================================
 // CITAS
 // ========================================
 
 model Cita {
-  id          Int          @id @default(autoincrement())
-  fecha       DateTime
-  duracion    Int          @default(120)
-  motivo      String?
-  notas       String?
-  estado      EstadoCita   @default(PENDIENTE)
-  creadoEn    DateTime     @default(now())
-  actualizadoEn DateTime    @updatedAt
+  id            Int          @id @default(autoincrement())
+  fecha         DateTime
+  duracion      Int          @default(120)
+  motivo        String?
+  notas         String?
+  estado        EstadoCita   @default(PENDIENTE)
+  creadoEn      DateTime     @default(now())
+  actualizadoEn DateTime     @updatedAt
 
-  estudioId   Int
-  estudio     Estudio      @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+  estudioId     Int
+  estudio       Estudio      @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  clienteId   Int
-  cliente     Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clienteId     Int
+  cliente       Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
-  usuarioId   Int?
-  usuario     Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId     Int?
+  usuario       Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@index([estudioId, fecha])
   @@index([clienteId])
 }
+
 
 // ========================================
 // TATUAJES
@@ -122,8 +129,8 @@ model Tatuaje {
   descripcion   String?
   estilo        String?
   zona          String?
-  precio        Decimal?      @db.Decimal(10, 2)
-  anticipo      Decimal?      @db.Decimal(10, 2)
+  precio        Decimal?      @db.Decimal(10,2)
+  anticipo      Decimal?      @db.Decimal(10,2)
   estado        EstadoTatuaje @default(PENDIENTE)
   notas         String?
   creadoEn      DateTime      @default(now())
@@ -146,33 +153,34 @@ model Tatuaje {
   @@index([usuarioId])
 }
 
+
 // ========================================
 // PAGOS
 // ========================================
 
 model Pago {
-  id          Int      @id @default(autoincrement())
-  monto       Decimal  @db.Decimal(10, 2)
-  fecha       DateTime @default(now())
-  metodo      MetodoPago
+  id          Int        @id @default(autoincrement())
+  monto       Decimal    @db.Decimal(10,2)
   concepto    String?
   notas       String?
+  metodo      MetodoPago
+  fecha       DateTime   @default(now())
 
   estudioId   Int
-  estudio     Estudio  @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+  estudio     Estudio    @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  clienteId   Int
-  cliente     Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clienteId   Int?
+  cliente     Cliente?   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   tatuajeId   Int?
-  tatuaje     Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: SetNull)
+  tatuaje     Tatuaje?   @relation(fields: [tatuajeId], references: [id], onDelete: Cascade)
 
   usuarioId   Int?
-  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuario     Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
-  @@index([estudioId, fecha])
-  @@index([clienteId])
+  @@index([estudioId])
 }
+
 
 // ========================================
 // GASTOS
@@ -182,7 +190,7 @@ model Gasto {
   id          Int       @id @default(autoincrement())
   concepto    String
   descripcion String?
-  monto       Decimal   @db.Decimal(10, 2)
+  monto       Decimal   @db.Decimal(10,2)
   fecha       DateTime  @default(now())
   categoria   CategoriaGasto
   notas       String?
@@ -196,28 +204,6 @@ model Gasto {
   @@index([estudioId, fecha])
 }
 
-// ========================================
-// INVENTARIO
-// ========================================
-
-model Inventario {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  descripcion String?
-  categoria   String?
-  cantidad    Decimal  @db.Decimal(10, 2)
-  unidad      String?
-  minimo      Decimal? @db.Decimal(10, 2)
-  costo       Decimal? @db.Decimal(10, 2)
-  activo      Boolean  @default(true)
-  creadoEn    DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
-
-  estudioId   Int
-  estudio     Estudio  @relation(fields: [estudioId], references: [id], onDelete: Cascade)
-
-  @@index([estudioId])
-}
 
 // ========================================
 // FOTOS
@@ -242,24 +228,72 @@ model Foto {
   @@index([tatuajeId])
 }
 
+
 // ========================================
-// SUSCRIPCIONES
+// INVENTARIO
+// ========================================
+
+model Inventario {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  categoria   String?
+  cantidad    Decimal  @db.Decimal(10,2)
+  unidad      String?
+  minimo      Decimal? @db.Decimal(10,2)
+  costo       Decimal? @db.Decimal(10,2)
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  estudioId   Int
+  estudio     Estudio  @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  movimientos MovimientoInventario[]
+
+  @@index([estudioId])
+}
+
+
+// ========================================
+// MOVIMIENTOS INVENTARIO
+// ========================================
+
+model MovimientoInventario {
+  id           Int                      @id @default(autoincrement())
+  tipo         TipoMovimientoInventario
+  cantidad     Decimal                  @db.Decimal(10,2)
+  motivo       String?
+  fecha        DateTime                 @default(now())
+
+  estudioId    Int
+  estudio      Estudio                  @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  inventarioId Int
+  inventario   Inventario               @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+
+  usuarioId    Int?
+  usuario      Usuario?                 @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([estudioId])
+  @@index([inventarioId])
+}
+
+
+// ========================================
+// SUSCRIPCION
 // ========================================
 
 model Suscripcion {
-  id              Int               @id @default(autoincrement())
-  plan            Plan
-  estado          EstadoSuscripcion @default(ACTIVA)
-  inicio          DateTime          @default(now())
-  renovacion      DateTime?
-  proveedor       String?
-  proveedorId     String?
-  creadoEn        DateTime          @default(now())
-  actualizadoEn   DateTime          @updatedAt
+  id          Int               @id @default(autoincrement())
+  plan        Plan
+  estado      EstadoSuscripcion
+  creadoEn    DateTime @default(now())
 
-  estudioId       Int               @unique
-  estudio         Estudio           @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+  estudioId   Int @unique
+  estudio     Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 }
+
 
 // ========================================
 // ENUMS
@@ -268,7 +302,6 @@ model Suscripcion {
 enum Rol {
   ADMIN
   TATUADOR
-  RECEPCION
 }
 
 enum EstadoCita {
@@ -281,7 +314,6 @@ enum EstadoCita {
 enum EstadoTatuaje {
   PENDIENTE
   EN_PROCESO
-  PAUSADO
   TERMINADO
   CANCELADO
 }
@@ -308,6 +340,11 @@ enum TipoFoto {
   DESPUES
   DISENO
   OTRA
+}
+
+enum TipoMovimientoInventario {
+  ENTRADA
+  SALIDA
 }
 
 enum Plan {
