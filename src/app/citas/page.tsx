@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Cliente = {
@@ -114,9 +115,7 @@ export default function CitasPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            estado,
-          }),
+          body: JSON.stringify({ estado }),
         }
       );
 
@@ -170,18 +169,36 @@ export default function CitasPage() {
   return (
     <main className="min-h-screen bg-muted/40 p-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <header>
-          <p className="text-sm text-muted-foreground">
-            Agenda del estudio
-          </p>
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Agenda del estudio
+            </p>
 
-          <h1 className="text-3xl font-bold">
-            Citas
-          </h1>
+            <h1 className="text-3xl font-bold">
+              Citas
+            </h1>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Consulta y administra las citas de tus clientes.
-          </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Consulta y administra las citas de tus clientes.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Link
+              href="/citas"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Agenda diaria
+            </Link>
+
+            <Link
+              href="/citas/semana"
+              className="rounded-lg border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Agenda semanal
+            </Link>
+          </div>
         </header>
 
         {error && (

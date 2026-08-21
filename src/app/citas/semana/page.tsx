@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   formatoDia,
@@ -59,6 +60,7 @@ export default function SemanaPage() {
     async function cargar() {
       try {
         setCargando(true);
+        setError("");
 
         const respuesta = await fetch("/api/citas");
         const datos = await respuesta.json();
@@ -130,9 +132,20 @@ export default function SemanaPage() {
             <h1 className="text-3xl font-bold">
               Semana
             </h1>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Consulta las citas organizadas de lunes a domingo.
+            </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/citas"
+              className="rounded-lg border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Agenda diaria
+            </Link>
+
             <button
               type="button"
               onClick={semanaAnterior}
@@ -144,7 +157,7 @@ export default function SemanaPage() {
             <button
               type="button"
               onClick={semanaActual}
-              className="rounded-lg border bg-background px-3 py-2 text-sm hover:bg-muted"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               Hoy
             </button>
@@ -214,6 +227,12 @@ export default function SemanaPage() {
                             {cita.motivo && (
                               <p className="mt-2 text-xs">
                                 {cita.motivo}
+                              </p>
+                            )}
+
+                            {cita.usuario && (
+                              <p className="mt-2 text-[11px]">
+                                {cita.usuario.nombre}
                               </p>
                             )}
 
