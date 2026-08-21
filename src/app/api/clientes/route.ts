@@ -26,6 +26,34 @@ export async function GET() {
       email: true,
       instagram: true,
       creadoEn: true,
+
+      tatuajes: {
+        orderBy: {
+          creadoEn: "desc",
+        },
+        select: {
+          id: true,
+          nombre: true,
+          estilo: true,
+          zona: true,
+          precio: true,
+          anticipo: true,
+          estado: true,
+
+          pagos: {
+            orderBy: {
+              fecha: "desc",
+            },
+            select: {
+              id: true,
+              monto: true,
+              fecha: true,
+              metodo: true,
+              concepto: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -47,31 +75,16 @@ export async function POST(request: Request) {
 
     const nombre = String(body.nombre ?? "").trim();
     const telefono = String(body.telefono ?? "").trim();
-    const email = String(body.email ?? "").trim() || null;
-    const instagram = String(body.instagram ?? "").trim() || null;
 
     if (!nombre || !telefono) {
       return NextResponse.json(
         {
-          error: "El nombre y el teléfono son obligatorios.",
+          error:
+            "El nombre y teléfono son obligatorios.",
         },
-        { status: 400 }
-      );
-    }
-
-    const clienteExistente = await prisma.cliente.findFirst({
-      where: {
-        estudioId: session.user.estudioId,
-        telefono,
-      },
-    });
-
-    if (clienteExistente) {
-      return NextResponse.json(
         {
-          error: "Ya existe un cliente con ese teléfono.",
-        },
-        { status: 409 }
+          status: 400,
+        }
       );
     }
 
@@ -79,8 +92,10 @@ export async function POST(request: Request) {
       data: {
         nombre,
         telefono,
-        email,
-        instagram,
+        email:
+          String(body.email ?? "").trim() || null,
+        instagram:
+          String(body.instagram ?? "").trim() || null,
         estudioId: session.user.estudioId,
       },
       select: {
@@ -90,18 +105,23 @@ export async function POST(request: Request) {
         email: true,
         instagram: true,
         creadoEn: true,
+        tatuajes: true,
       },
     });
 
-    return NextResponse.json(cliente, { status: 201 });
+    return NextResponse.json(cliente, {
+      status: 201,
+    });
   } catch (error) {
-    console.error("Error al crear cliente:", error);
+    console.error(error);
 
     return NextResponse.json(
       {
         error: "No se pudo crear el cliente.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
