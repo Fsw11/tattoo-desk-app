@@ -302,6 +302,7 @@ model Suscripcion {
 enum Rol {
   ADMIN
   TATUADOR
+  RECEPCION
 }
 
 enum EstadoCita {
@@ -316,6 +317,7 @@ enum EstadoTatuaje {
   EN_PROCESO
   TERMINADO
   CANCELADO
+  PAUSADO
 }
 
 enum MetodoPago {
