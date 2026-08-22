@@ -86,6 +86,62 @@ export default function ClientesPage() {
   const [pagoMetodo, setPagoMetodo] = useState("EFECTIVO");
   const [pagoConcepto, setPagoConcepto] = useState("");
   const [pagoNotas, setPagoNotas] = useState("");
+  const [mostrarFormularioFoto, setMostrarFormularioFoto] = useState<
+    number | null
+  >(null);
+  const [guardandoFoto, setGuardandoFoto] = useState(false);
+  const [fotoUrl, setFotoUrl] = useState("");
+  const [fotoDescripcion, setFotoDescripcion] = useState("");
+  const [fotoTipo, setFotoTipo] = useState("TATUAJE");
+  const [mostrarFormularioFotoTatuaje, setMostrarFormularioFotoTatuaje] =
+    useState<number | null>(null);
+  const [fotoTatuajeUrl, setFotoTatuajeUrl] = useState("");
+  const [fotoTatuajeDescripcion, setFotoTatuajeDescripcion] = useState("");
+  const [fotoTatuajeTipo, setFotoTatuajeTipo] = useState("DISENO");
+
+  async function crearFotoTatuaje(clienteId: number, tatuajeId: number) {
+    if (!fotoTatuajeUrl.trim()) {
+      setError("La URL de la imagen es obligatoria.");
+      return;
+    }
+
+    try {
+      setError("");
+
+      const respuesta = await fetch("/api/fotos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clienteId,
+          tatuajeId,
+          url: fotoTatuajeUrl.trim(),
+          descripcion: fotoTatuajeDescripcion.trim() || null,
+          tipo: fotoTatuajeTipo,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "No se pudo guardar la foto.");
+      }
+
+      setFotoTatuajeUrl("");
+      setFotoTatuajeDescripcion("");
+      setFotoTatuajeTipo("DISENO");
+      setMostrarFormularioFotoTatuaje(null);
+
+      await cargarClientes();
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error ? error.message : "Error al guardar la foto."
+      );
+    }
+  }
 
   async function crearPago(clienteId: number, tatuajeId: number) {
     if (!pagoMonto.trim()) {
@@ -134,6 +190,53 @@ export default function ClientesPage() {
       );
     } finally {
       setGuardandoPago(false);
+    }
+  }
+
+  async function crearFoto(clienteId: number, tatuajeId?: number) {
+    if (!fotoUrl.trim()) {
+      setError("La URL de la foto es obligatoria.");
+      return;
+    }
+
+    try {
+      setGuardandoFoto(true);
+      setError("");
+
+      const respuesta = await fetch("/api/fotos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clienteId,
+          tatuajeId: tatuajeId ?? null,
+          url: fotoUrl.trim(),
+          descripcion: fotoDescripcion.trim() || null,
+          tipo: fotoTipo,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "No se pudo guardar la foto.");
+      }
+
+      setFotoUrl("");
+      setFotoDescripcion("");
+      setFotoTipo("TATUAJE");
+      setMostrarFormularioFoto(null);
+
+      await cargarClientes();
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error ? error.message : "Error al guardar la foto."
+      );
+    } finally {
+      setGuardandoFoto(false);
     }
   }
 
@@ -888,6 +991,99 @@ export default function ClientesPage() {
                           Galería del cliente
                         </h3>
 
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError("");
+
+                              setMostrarFormularioFoto(
+                                mostrarFormularioFoto === cliente.id
+                                  ? null
+                                  : cliente.id
+                              );
+                            }}
+                            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+                          >
+                            {mostrarFormularioFoto === cliente.id
+                              ? "Cancelar"
+                              : "Agregar foto"}
+                          </button>
+                        </div>
+
+                        {mostrarFormularioFoto === cliente.id && (
+                          <section className="mt-4 rounded-xl border bg-muted/30 p-5">
+                            <h4 className="mb-4 font-semibold">
+                              Nueva foto del cliente
+                            </h4>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="md:col-span-2">
+                                <label className="mb-1 block text-sm font-medium">
+                                  URL de imagen *
+                                </label>
+
+                                <input
+                                  placeholder="https://imagen.com/foto.jpg"
+                                  value={fotoUrl}
+                                  onChange={(e) => setFotoUrl(e.target.value)}
+                                  className="w-full rounded-lg border bg-background px-3 py-2"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-sm font-medium">
+                                  Tipo
+                                </label>
+
+                                <select
+                                  value={fotoTipo}
+                                  onChange={(e) => setFotoTipo(e.target.value)}
+                                  className="w-full rounded-lg border bg-background px-3 py-2"
+                                >
+                                  <option value="TATUAJE">Tatuaje</option>
+
+                                  <option value="ANTES">Antes</option>
+
+                                  <option value="DESPUES">Después</option>
+
+                                  <option value="DISENO">Diseño</option>
+
+                                  <option value="OTRA">Otra</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-sm font-medium">
+                                  Descripción
+                                </label>
+
+                                <input
+                                  placeholder="Descripción de la foto"
+                                  value={fotoDescripcion}
+                                  onChange={(e) =>
+                                    setFotoDescripcion(e.target.value)
+                                  }
+                                  className="w-full rounded-lg border bg-background px-3 py-2"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="mt-5 flex justify-end">
+                              <button
+                                type="button"
+                                disabled={guardandoFoto}
+                                onClick={() => crearFoto(cliente.id)}
+                                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                              >
+                                {guardandoFoto
+                                  ? "Guardando..."
+                                  : "Guardar foto"}
+                              </button>
+                            </div>
+                          </section>
+                        )}
+
                         {fotos.length === 0 ? (
                           <p className="mt-2 text-sm text-muted-foreground">
                             No hay fotos generales.
@@ -1129,6 +1325,101 @@ export default function ClientesPage() {
                                     <h5 className="font-semibold">
                                       Fotos del tatuaje
                                     </h5>
+
+                                    <div className="mt-3 flex justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setMostrarFormularioFotoTatuaje(
+                                            tatuaje.id
+                                          )
+                                        }
+                                        className="rounded-lg border px-3 py-2 text-sm"
+                                      >
+                                        Agregar foto
+                                      </button>
+                                    </div>
+
+                                    {mostrarFormularioFotoTatuaje ===
+                                      tatuaje.id && (
+                                      <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                                        <h6 className="mb-3 font-semibold">
+                                          Agregar foto al tatuaje
+                                        </h6>
+
+                                        <div className="grid gap-3 md:grid-cols-2">
+                                          <input
+                                            type="text"
+                                            placeholder="URL de la imagen"
+                                            value={fotoTatuajeUrl}
+                                            onChange={(e) =>
+                                              setFotoTatuajeUrl(e.target.value)
+                                            }
+                                            className="rounded-lg border px-3 py-2"
+                                          />
+
+                                          <select
+                                            value={fotoTatuajeTipo}
+                                            onChange={(e) =>
+                                              setFotoTatuajeTipo(e.target.value)
+                                            }
+                                            className="rounded-lg border px-3 py-2"
+                                          >
+                                            <option value="DISENO">
+                                              Diseño
+                                            </option>
+                                            <option value="PROCESO">
+                                              Proceso
+                                            </option>
+                                            <option value="RESULTADO">
+                                              Resultado
+                                            </option>
+                                            <option value="OTRA">Otra</option>
+                                          </select>
+
+                                          <textarea
+                                            placeholder="Descripción de la foto"
+                                            value={fotoTatuajeDescripcion}
+                                            onChange={(e) =>
+                                              setFotoTatuajeDescripcion(
+                                                e.target.value
+                                              )
+                                            }
+                                            className="min-h-20 rounded-lg border px-3 py-2 md:col-span-2"
+                                          />
+                                        </div>
+
+                                        <div className="mt-3 flex justify-end gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setMostrarFormularioFotoTatuaje(
+                                                null
+                                              );
+                                              setFotoTatuajeUrl("");
+                                              setFotoTatuajeDescripcion("");
+                                              setFotoTatuajeTipo("DISENO");
+                                            }}
+                                            className="rounded-lg border px-3 py-2"
+                                          >
+                                            Cancelar
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              crearFotoTatuaje(
+                                                cliente.id,
+                                                tatuaje.id
+                                              )
+                                            }
+                                            className="rounded-lg bg-primary px-3 py-2 text-primary-foreground"
+                                          >
+                                            Guardar foto
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
 
                                     {fotosTatuaje.length === 0 ? (
                                       <p className="mt-2 text-sm text-muted-foreground">

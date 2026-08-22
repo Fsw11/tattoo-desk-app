@@ -1,204 +1,206 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+
+// ========================================
+// GET FOTOS
+// ========================================
 
 export async function GET() {
   const session = await auth();
 
   if (!session?.user) {
     return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
+      {
+        error: "No autorizado",
+      },
+      {
+        status: 401,
+      }
     );
   }
 
-  const fotos = await prisma.foto.findMany({
-    where: {
-      estudioId: session.user.estudioId,
-    },
-    orderBy: {
-      creadoEn: "desc",
-    },
-    select: {
-      id: true,
-      url: true,
-      descripcion: true,
-      tipo: true,
-      creadoEn: true,
 
-      cliente: {
-        select: {
-          id: true,
-          nombre: true,
+  const fotos =
+    await prisma.foto.findMany({
+
+      where: {
+        estudioId:
+          session.user.estudioId,
+      },
+
+      orderBy: {
+        creadoEn: "desc",
+      },
+
+      select: {
+        id: true,
+        url: true,
+        descripcion: true,
+        tipo: true,
+        creadoEn: true,
+
+        cliente: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+
+        tatuaje: {
+          select: {
+            id: true,
+            nombre: true,
+          },
         },
       },
 
-      tatuaje: {
-        select: {
-          id: true,
-          nombre: true,
-        },
-      },
-    },
-  });
+    });
+
 
   return NextResponse.json(fotos);
 }
 
-export async function POST(request: Request) {
+
+
+
+
+// ========================================
+// POST CREAR FOTO
+// ========================================
+
+export async function POST(
+  request: NextRequest
+) {
+
   const session = await auth();
+
 
   if (!session?.user) {
     return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
+      {
+        error:"No autorizado",
+      },
+      {
+        status:401,
+      }
     );
   }
 
+
   try {
-    const body = await request.json();
 
-    const clienteId = Number(body.clienteId);
+    const body =
+      await request.json();
 
-    if (!Number.isInteger(clienteId)) {
+
+    const clienteId =
+      Number(body.clienteId);
+
+
+    if (!clienteId) {
       return NextResponse.json(
         {
-          error: "El cliente es obligatorio.",
+          error:
+            "Cliente requerido.",
         },
         {
-          status: 400,
+          status:400,
         }
       );
     }
 
-    const tiposPermitidos = [
-      "TATUAJE",
-      "ANTES",
-      "DESPUES",
-      "DISENO",
-      "OTRA",
-    ];
 
-    if (
-      !tiposPermitidos.includes(
-        body.tipo
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error: "Tipo de foto inválido.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
 
     const cliente =
       await prisma.cliente.findFirst({
+
         where: {
           id: clienteId,
           estudioId:
             session.user.estudioId,
         },
-        select: {
-          id: true,
+
+        select:{
+          id:true,
         },
+
       });
+
+
 
     if (!cliente) {
       return NextResponse.json(
         {
           error:
-            "El cliente no pertenece al estudio.",
+            "Cliente no encontrado.",
         },
         {
-          status: 404,
+          status:404,
         }
       );
     }
 
-    let tatuajeId: number | null = null;
 
-    if (
-      body.tatuajeId !== undefined &&
-      body.tatuajeId !== null &&
-      body.tatuajeId !== ""
-    ) {
-      tatuajeId = Number(body.tatuajeId);
-
-      const tatuaje =
-        await prisma.tatuaje.findFirst({
-          where: {
-            id: tatuajeId,
-            clienteId,
-            estudioId:
-              session.user.estudioId,
-          },
-          select: {
-            id: true,
-          },
-        });
-
-      if (!tatuaje) {
-        return NextResponse.json(
-          {
-            error:
-              "El tatuaje no pertenece al cliente.",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-    }
 
     const foto =
       await prisma.foto.create({
+
         data: {
-          url: String(body.url),
+
+          url:
+            String(body.url ?? ""),
 
           descripcion:
-            String(
-              body.descripcion ?? ""
-            ).trim() || null,
+            body.descripcion || null,
 
-          tipo: body.tipo,
+          tipo:
+            body.tipo || "TATUAJE",
+
 
           estudioId:
             session.user.estudioId,
 
-          clienteId,
 
-          tatuajeId,
+          clienteId:
+            cliente.id,
+
+
+          tatuajeId:
+            body.tatuajeId
+              ? Number(body.tatuajeId)
+              : null,
+
         },
 
-        select: {
-          id: true,
-          url: true,
-          descripcion: true,
-          tipo: true,
-          creadoEn: true,
-        },
       });
+
+
 
     return NextResponse.json(
       foto,
       {
-        status: 201,
+        status:201,
       }
     );
-  } catch (error) {
+
+
+  } catch(error) {
+
     console.error(error);
+
 
     return NextResponse.json(
       {
         error:
-          "No se pudo registrar la foto.",
+          "No se pudo guardar la foto.",
       },
       {
-        status: 500,
+        status:500,
       }
     );
+
   }
+
 }
