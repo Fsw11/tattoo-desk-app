@@ -617,31 +617,51 @@ export default function FotosPage() {
               </div>
 
 
-              <select
-                value={tatuajeId}
-                onChange={(e) =>
-                  setTatuajeId(
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-lg border p-2"
-              >
-                <option value="">
-                  Foto general
-                </option>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">
+                  Tatuaje
+                </label>
 
-                {tatuajesFiltrados.map(
-                  (tatuaje) => (
-                    <option
-                      key={tatuaje.id}
-                      value={tatuaje.id}
-                    >
-                      {tatuaje.nombre}
-                    </option>
-                  )
+                <select
+                  value={tatuajeId}
+                  onChange={(e) =>
+                    setTatuajeId(
+                      e.target.value
+                    )
+                  }
+                  disabled={!clienteId}
+                  className="w-full rounded-lg border p-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">
+                    Foto general
+                  </option>
+
+                  {tatuajesFiltrados.map(
+                    (tatuaje) => (
+                      <option
+                        key={tatuaje.id}
+                        value={tatuaje.id}
+                      >
+                        {tatuaje.nombre}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                {clienteId &&
+                  tatuajesFiltrados.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Este cliente no tiene tatuajes registrados.
+                      Puedes guardar la foto como foto general.
+                    </p>
+                  )}
+
+                {!clienteId && (
+                  <p className="text-sm text-muted-foreground">
+                    Selecciona primero un cliente.
+                  </p>
                 )}
-
-              </select>
+              </div>
 
 
               <select
