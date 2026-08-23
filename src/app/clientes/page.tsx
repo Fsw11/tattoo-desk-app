@@ -91,6 +91,8 @@ export default function ClientesPage() {
   >(null);
   const [guardandoFoto, setGuardandoFoto] = useState(false);
   const [fotoUrl, setFotoUrl] = useState("");
+  const [fotoArchivo, setFotoArchivo] = useState<File | null>(null);
+  const [fotoVistaPrevia, setFotoVistaPrevia] = useState("");
   const [fotoDescripcion, setFotoDescripcion] = useState("");
   const [fotoTipo, setFotoTipo] = useState("TATUAJE");
   const [mostrarFormularioFotoTatuaje, setMostrarFormularioFotoTatuaje] =
@@ -139,6 +141,42 @@ export default function ClientesPage() {
 
       setError(
         error instanceof Error ? error.message : "Error al guardar la foto."
+      );
+    }
+  }
+
+  async function eliminarFoto(fotoId: number) {
+    const confirmar = window.confirm("¿Seguro que quieres eliminar esta foto?");
+
+    if (!confirmar) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      const respuesta = await fetch("/api/fotos", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: fotoId,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "No se pudo eliminar la foto.");
+      }
+
+      await cargarClientes();
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error ? error.message : "Error al eliminar la foto."
       );
     }
   }
@@ -193,15 +231,40 @@ export default function ClientesPage() {
     }
   }
 
+  async function subirArchivoFoto() {
+    if (!fotoArchivo) {
+      return null;
+    }
+
+    const formData = new FormData();
+
+    formData.append("archivo", fotoArchivo);
+
+    const respuesta = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      throw new Error(datos.error || "No se pudo subir la imagen.");
+    }
+
+    return datos.url as string;
+  }
+
   async function crearFoto(clienteId: number, tatuajeId?: number) {
-    if (!fotoUrl.trim()) {
-      setError("La URL de la foto es obligatoria.");
+    if (!fotoArchivo && !fotoUrl.trim()) {
+      setError("Selecciona una imagen o escribe una URL.");
       return;
     }
 
     try {
       setGuardandoFoto(true);
       setError("");
+
+      const urlImagen = fotoArchivo ? await subirArchivoFoto() : fotoUrl.trim();
 
       const respuesta = await fetch("/api/fotos", {
         method: "POST",
@@ -211,7 +274,7 @@ export default function ClientesPage() {
         body: JSON.stringify({
           clienteId,
           tatuajeId: tatuajeId ?? null,
-          url: fotoUrl.trim(),
+          url: urlImagen,
           descripcion: fotoDescripcion.trim() || null,
           tipo: fotoTipo,
         }),
@@ -224,6 +287,7 @@ export default function ClientesPage() {
       }
 
       setFotoUrl("");
+      setFotoArchivo(null);
       setFotoDescripcion("");
       setFotoTipo("TATUAJE");
       setMostrarFormularioFoto(null);
@@ -1024,6 +1088,39 @@ export default function ClientesPage() {
                                 </label>
 
                                 <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const archivo = e.target.files?.[0] ?? null;
+
+                                    setFotoArchivo(archivo);
+
+                                    if (archivo) {
+                                      setFotoVistaPrevia(
+                                        URL.createObjectURL(archivo)
+                                      );
+                                    } else {
+                                      setFotoVistaPrevia("");
+                                    }
+                                  }}
+                                  className="w-full rounded-lg border px-3 py-2"
+                                />
+
+                                {fotoVistaPrevia && (
+                                  <div className="mt-3">
+                                    <p className="mb-2 text-sm font-medium">
+                                      Vista previa
+                                    </p>
+
+                                    <img
+                                      src={fotoVistaPrevia}
+                                      alt="Vista previa"
+                                      className="h-48 w-full rounded-lg border object-cover"
+                                    />
+                                  </div>
+                                )}
+
+                                <input
                                   placeholder="https://imagen.com/foto.jpg"
                                   value={fotoUrl}
                                   onChange={(e) => setFotoUrl(e.target.value)}
@@ -1109,6 +1206,14 @@ export default function ClientesPage() {
                                       {foto.descripcion}
                                     </p>
                                   )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarFoto(foto.id)}
+                                    className="mt-3 rounded-lg border border-red-300 px-3 py-1 text-sm text-red-600"
+                                  >
+                                    Eliminar
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -1451,6 +1556,16 @@ export default function ClientesPage() {
                                                   {foto.descripcion}
                                                 </p>
                                               )}
+
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  eliminarFoto(foto.id)
+                                                }
+                                                className="mt-3 rounded-lg border border-red-300 px-3 py-1 text-sm text-red-600"
+                                              >
+                                                Eliminar
+                                              </button>
                                             </div>
                                           </div>
                                         ))}

@@ -96,6 +96,18 @@ export default function FotosPage() {
   const [error, setError] =
     useState("");
 
+  const [fotoSeleccionada, setFotoSeleccionada] =
+    useState<Foto | null>(null);
+
+  const [filtroTipo, setFiltroTipo] =
+    useState("TODAS");
+
+  const [filtroCliente, setFiltroCliente] =
+    useState("TODOS");
+
+  const [busquedaCliente, setBusquedaCliente] =
+    useState("");
+
   async function cargarDatos() {
     try {
       setCargando(true);
@@ -155,6 +167,48 @@ export default function FotosPage() {
     }
   }
 
+  async function eliminarFoto(fotoId: number) {
+    const confirmar = window.confirm(
+      "¿Seguro que deseas eliminar esta foto?"
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      const respuesta = await fetch("/api/fotos", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: fotoId,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error || "No se pudo eliminar la foto."
+        );
+      }
+
+      await cargarDatos();
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar la foto."
+      );
+    }
+  }
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -178,6 +232,17 @@ export default function FotosPage() {
     );
   }
 
+  const clientesFiltrados =
+    clientes.filter((cliente) =>
+      cliente.nombre
+        .toLowerCase()
+        .includes(
+          busquedaCliente
+            .toLowerCase()
+            .trim()
+        )
+    );
+
   const tatuajesFiltrados =
     tatuajes.filter(
       (tatuaje) =>
@@ -185,6 +250,24 @@ export default function FotosPage() {
         tatuaje.clienteId ===
           Number(clienteId)
     );
+
+  const fotosFiltradas =
+    fotos.filter((foto) => {
+      const coincideCliente =
+        filtroCliente === "TODOS" ||
+        String(foto.cliente?.id) === filtroCliente;
+
+      const coincideTipo =
+        filtroTipo === "TODAS" ||
+        foto.tipo === filtroTipo;
+
+      return coincideCliente && coincideTipo;
+    });
+
+  const cantidadFotosPorTipo = (tipo: string) =>
+    fotos.filter(
+      (foto) => foto.tipo === tipo
+    ).length;
 
   function limpiar() {
     setArchivo(null);
@@ -338,21 +421,56 @@ export default function FotosPage() {
               className="space-y-5"
             >
 
-              <input
-                type="file"
-                accept="image/*"
-                onChange={seleccionarArchivo}
-                className="block"
-              />
+              <div className="space-y-3">
+                <label className="block text-sm font-medium">
+                  Imagen
+                </label>
 
+                <label className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed p-6 transition hover:bg-muted">
+                  <div className="text-center">
+                    <div className="mb-2 text-3xl">
+                      📷
+                    </div>
 
-              {preview && (
-                <img
-                  src={preview}
-                  alt="preview"
-                  className="h-48 rounded-lg object-cover"
-                />
-              )}
+                    <p className="font-medium">
+                      Seleccionar imagen
+                    </p>
+
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      PNG, JPG, JPEG o WEBP
+                    </p>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={seleccionarArchivo}
+                    className="hidden"
+                  />
+                </label>
+
+                {archivo && (
+                  <div className="rounded-lg border p-3">
+                    <p className="font-medium">
+                      {archivo.name}
+                    </p>
+
+                    <p className="text-sm text-muted-foreground">
+                      {(archivo.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                )}
+
+                {preview && (
+                  <div className="overflow-hidden rounded-xl border">
+                    <img
+                      src={preview}
+                      alt="Vista previa de la imagen"
+                      className="max-h-80 w-full object-contain"
+                    />
+                  </div>
+                )}
+              </div>
 
 
               <select
@@ -465,46 +583,168 @@ export default function FotosPage() {
         )}
 
 
-        <section className="grid gap-5 md:grid-cols-3">
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium">
+            Buscar cliente
+          </label>
 
-          {fotos.map(
-            (foto) => (
-              <article
-                key={foto.id}
-                className="overflow-hidden rounded-xl border bg-background"
+          <input
+            type="text"
+            placeholder="Escribe el nombre del cliente..."
+            value={busquedaCliente}
+            onChange={(e) =>
+              setBusquedaCliente(e.target.value)
+            }
+            className="mb-3 w-full max-w-md rounded-lg border bg-background px-3 py-2"
+          />
+
+          <label className="mb-1 block text-sm font-medium">
+            Filtrar por cliente
+          </label>
+
+          <select
+            value={filtroCliente}
+            onChange={(e) =>
+              setFiltroCliente(e.target.value)
+            }
+            className="w-full max-w-md rounded-lg border bg-background px-3 py-2"
+          >
+            <option value="TODOS">
+              Todos los clientes
+            </option>
+
+            {clientesFiltrados.map((cliente) => (
+              <option
+                key={cliente.id}
+                value={cliente.id}
               >
+                {cliente.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
 
+        <div className="mb-5 flex flex-wrap gap-2">
+          {[
+            { valor: "TODAS", nombre: "Todas" },
+            { valor: "TATUAJE", nombre: "Tatuaje" },
+            { valor: "ANTES", nombre: "Antes" },
+            { valor: "DESPUES", nombre: "Después" },
+            { valor: "DISENO", nombre: "Diseño" },
+            { valor: "OTRA", nombre: "Otra" },
+          ].map((filtro) => {
+            const cantidad =
+              filtro.valor === "TODAS"
+                ? fotos.length
+                : cantidadFotosPorTipo(filtro.valor);
+
+            return (
+              <button
+                key={filtro.valor}
+                type="button"
+                onClick={() => setFiltroTipo(filtro.valor)}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                  filtroTipo === filtro.valor
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted"
+                }`}
+              >
+                {filtro.nombre} ({cantidad})
+              </button>
+            );
+          })}
+        </div>
+
+        <section className="grid gap-5 md:grid-cols-3">
+          {fotosFiltradas.map((foto) => (
+            <article
+              key={foto.id}
+              className="overflow-hidden rounded-xl border bg-background"
+            >
+              <button
+                type="button"
+                onClick={() => setFotoSeleccionada(foto)}
+                className="block w-full cursor-zoom-in"
+              >
                 <img
                   src={foto.url}
                   alt="foto"
-                  className="h-64 w-full object-cover"
+                  className="h-64 w-full object-cover transition hover:scale-[1.02]"
                 />
+              </button>
 
-                <div className="p-4">
+              <div className="p-4">
+                <p className="font-semibold">
+                  {foto.cliente?.nombre ?? "Cliente desconocido"}
+                </p>
 
-                  <p className="font-semibold">
-                    {foto.cliente.nombre}
+                <p className="text-sm">
+                  {foto.tipo}
+                </p>
+
+                {foto.descripcion && (
+                  <p className="text-sm text-muted-foreground">
+                    {foto.descripcion}
                   </p>
+                )}
 
-                  <p className="text-sm">
-                    {foto.tipo}
-                  </p>
-
-                  {foto.descripcion && (
-                    <p className="text-sm text-muted-foreground">
-                      {foto.descripcion}
-                    </p>
-                  )}
-
-                </div>
-
-              </article>
-            )
-          )}
-
+                <button
+                  type="button"
+                  onClick={() => eliminarFoto(foto.id)}
+                  className="mt-4 w-full rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                >
+                  Eliminar foto
+                </button>
+              </div>
+            </article>
+          ))}
         </section>
 
       </div>
+
+      {fotoSeleccionada && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setFotoSeleccionada(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setFotoSeleccionada(null)}
+            className="absolute right-4 top-4 z-10 rounded-full bg-white px-4 py-2 text-xl font-bold text-black shadow-lg"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+
+          <div
+            className="relative max-h-[90vh] max-w-[90vw]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={fotoSeleccionada.url}
+              alt="Foto ampliada"
+              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+            />
+
+            <div className="mt-2 rounded-lg bg-black/70 p-3 text-center text-white">
+              <p className="font-semibold">
+                {fotoSeleccionada.cliente?.nombre ?? "Cliente desconocido"}
+              </p>
+
+              <p className="text-sm">
+                {fotoSeleccionada.tipo}
+              </p>
+
+              {fotoSeleccionada.descripcion && (
+                <p className="mt-1 text-sm text-white/80">
+                  {fotoSeleccionada.descripcion}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
