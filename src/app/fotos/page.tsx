@@ -744,6 +744,12 @@ export default function FotosPage() {
                 {fotoSeleccionada.cliente?.nombre ?? "Cliente desconocido"}
               </p>
 
+              {fotoSeleccionada.tatuaje && (
+                <p className="text-sm text-white/80">
+                  Tatuaje: {fotoSeleccionada.tatuaje.nombre}
+                </p>
+              )}
+
               <p className="text-sm">
                 {fotoSeleccionada.tipo}
               </p>
