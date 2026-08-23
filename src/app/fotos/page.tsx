@@ -544,31 +544,77 @@ export default function FotosPage() {
               </div>
 
 
-              <select
-                value={clienteId}
-                onChange={(e) =>
-                  setClienteId(
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-lg border p-2"
-              >
-                <option value="">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">
                   Cliente
-                </option>
+                </label>
 
-                {clientes.map(
-                  (cliente) => (
-                    <option
-                      key={cliente.id}
-                      value={cliente.id}
-                    >
-                      {cliente.nombre}
-                    </option>
-                  )
+                <input
+                  type="text"
+                  placeholder="Buscar cliente..."
+                  value={
+                    clienteId
+                      ? clientes.find(
+                          (cliente) =>
+                            String(cliente.id) === clienteId
+                        )?.nombre ?? busquedaCliente
+                      : busquedaCliente
+                  }
+                  onChange={(e) => {
+                    setBusquedaCliente(e.target.value);
+
+                    if (clienteId) {
+                      setClienteId("");
+                      setTatuajeId("");
+                    }
+                  }}
+                  className="w-full rounded-lg border p-2"
+                />
+
+                {!clienteId &&
+                  busquedaCliente.trim() && (
+                    <div className="max-h-48 overflow-y-auto rounded-lg border bg-background">
+                      {clientesFiltrados.length > 0 ? (
+                        clientesFiltrados.map((cliente) => (
+                          <button
+                            key={cliente.id}
+                            type="button"
+                            onClick={() => {
+                              setClienteId(
+                                String(cliente.id)
+                              );
+                              setBusquedaCliente(
+                                cliente.nombre
+                              );
+                              setTatuajeId("");
+                            }}
+                            className="block w-full border-b px-3 py-2 text-left last:border-b-0 hover:bg-muted"
+                          >
+                            {cliente.nombre}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          No se encontraron clientes.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                {clienteId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClienteId("");
+                      setBusquedaCliente("");
+                      setTatuajeId("");
+                    }}
+                    className="text-sm text-muted-foreground hover:underline"
+                  >
+                    Cambiar cliente
+                  </button>
                 )}
-
-              </select>
+              </div>
 
 
               <select
@@ -640,8 +686,13 @@ export default function FotosPage() {
 
 
               <button
-                disabled={guardando}
-                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+                type="submit"
+                disabled={
+                  guardando ||
+                  !archivo ||
+                  !clienteId
+                }
+                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {guardando
                   ? "Guardando..."
