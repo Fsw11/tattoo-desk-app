@@ -200,6 +200,8 @@ export default function FotosPage() {
         );
       }
 
+      setFotoSeleccionada(null);
+
       await cargarDatos();
     } catch (error) {
       console.error(error);
@@ -902,6 +904,16 @@ export default function FotosPage() {
               <p className="text-sm">
                 {fotoSeleccionada.tipo}
               </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  eliminarFoto(fotoSeleccionada.id)
+                }
+                className="mt-3 rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10"
+              >
+                Eliminar foto
+              </button>
 
               {fotoSeleccionada.descripcion && (
                 <p className="mt-1 text-sm text-white/80">
