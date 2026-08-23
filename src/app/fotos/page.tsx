@@ -843,12 +843,25 @@ export default function FotosPage() {
             { valor: "OTRA", nombre: "Otra" },
           ].map((filtro) => {
             const cantidad =
-              filtro.valor === "TODAS"
-                ? fotos.filter((foto) =>
-                    filtroCliente === "TODOS" ||
-                    String(foto.cliente?.id) === filtroCliente
-                  ).length
-                : cantidadFotosPorTipo(filtro.valor);
+              fotos.filter((foto) => {
+                const coincideCliente =
+                  filtroCliente === "TODOS" ||
+                  String(foto.cliente?.id) === filtroCliente;
+
+                const coincideTatuaje =
+                  filtroTatuaje === "TODOS" ||
+                  String(foto.tatuaje?.id) === filtroTatuaje;
+
+                const coincideTipo =
+                  filtro.valor === "TODAS" ||
+                  foto.tipo === filtro.valor;
+
+                return (
+                  coincideCliente &&
+                  coincideTatuaje &&
+                  coincideTipo
+                );
+              }).length;
 
             return (
               <button
