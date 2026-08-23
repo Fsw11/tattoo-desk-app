@@ -884,7 +884,7 @@ export default function FotosPage() {
           {fotosFiltradas.map((foto) => (
             <article
               key={foto.id}
-              className="overflow-hidden rounded-xl border bg-background"
+              className="overflow-hidden rounded-xl border bg-background shadow-sm transition hover:shadow-md"
             >
               <button
                 type="button"
@@ -893,28 +893,36 @@ export default function FotosPage() {
               >
                 <img
                   src={foto.url}
-                  alt="foto"
-                  className="h-64 w-full object-cover transition hover:scale-[1.02]"
+                  alt={`Foto de ${foto.cliente?.nombre ?? "cliente"}`}
+                  className="h-64 w-full object-cover transition duration-200 hover:scale-[1.02]"
                 />
               </button>
 
-              <div className="p-4">
-                <p className="font-semibold">
-                  {foto.cliente?.nombre ?? "Cliente desconocido"}
-                </p>
-
-                {foto.tatuaje && (
-                  <p className="text-sm text-muted-foreground">
-                    Tatuaje: {foto.tatuaje.nombre}
+              <div className="space-y-3 p-4">
+                <div>
+                  <p className="text-base font-semibold">
+                    {foto.cliente?.nombre ?? "Cliente desconocido"}
                   </p>
-                )}
 
-                <p className="text-sm">
-                  {foto.tipo}
-                </p>
+                  {foto.tatuaje ? (
+                    <p className="mt-1 text-sm font-medium">
+                      Tatuaje: {foto.tatuaje.nombre}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Foto general
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase">
+                    {foto.tipo}
+                  </span>
+                </div>
 
                 {foto.descripcion && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     {foto.descripcion}
                   </p>
                 )}
@@ -922,7 +930,7 @@ export default function FotosPage() {
                 <button
                   type="button"
                   onClick={() => eliminarFoto(foto.id)}
-                  className="mt-4 w-full rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  className="w-full rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
                 >
                   Eliminar foto
                 </button>
