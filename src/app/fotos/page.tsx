@@ -587,6 +587,7 @@ export default function FotosPage() {
                                 cliente.nombre
                               );
                               setTatuajeId("");
+                              setFiltroTatuaje("TODOS");
                             }}
                             className="block w-full border-b px-3 py-2 text-left last:border-b-0 hover:bg-muted"
                           >
