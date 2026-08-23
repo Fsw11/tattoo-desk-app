@@ -264,6 +264,52 @@ export default function FotosPage() {
       return coincideCliente && coincideTipo;
     });
 
+  function fotoAnterior() {
+    if (!fotoSeleccionada || fotosFiltradas.length === 0) {
+      return;
+    }
+
+    const indiceActual = fotosFiltradas.findIndex(
+      (foto) => foto.id === fotoSeleccionada.id
+    );
+
+    if (indiceActual === -1) {
+      return;
+    }
+
+    const indiceAnterior =
+      indiceActual === 0
+        ? fotosFiltradas.length - 1
+        : indiceActual - 1;
+
+    setFotoSeleccionada(
+      fotosFiltradas[indiceAnterior]
+    );
+  }
+
+  function fotoSiguiente() {
+    if (!fotoSeleccionada || fotosFiltradas.length === 0) {
+      return;
+    }
+
+    const indiceActual = fotosFiltradas.findIndex(
+      (foto) => foto.id === fotoSeleccionada.id
+    );
+
+    if (indiceActual === -1) {
+      return;
+    }
+
+    const indiceSiguiente =
+      indiceActual === fotosFiltradas.length - 1
+        ? 0
+        : indiceActual + 1;
+
+    setFotoSeleccionada(
+      fotosFiltradas[indiceSiguiente]
+    );
+  }
+
   const cantidadFotosPorTipo = (tipo: string) =>
     fotos.filter((foto) => {
       const coincideCliente =
@@ -587,7 +633,7 @@ export default function FotosPage() {
         )}
 
 
-        <div className="mb-4">
+        <div className="mb-5">
           <label className="mb-1 block text-sm font-medium">
             Buscar cliente
           </label>
@@ -596,36 +642,71 @@ export default function FotosPage() {
             type="text"
             placeholder="Escribe el nombre del cliente..."
             value={busquedaCliente}
-            onChange={(e) =>
-              setBusquedaCliente(e.target.value)
-            }
-            className="mb-3 w-full max-w-md rounded-lg border bg-background px-3 py-2"
+            onChange={(e) => {
+              setBusquedaCliente(e.target.value);
+
+              if (filtroCliente !== "TODOS") {
+                setFiltroCliente("TODOS");
+              }
+            }}
+            className="w-full max-w-md rounded-lg border bg-background px-3 py-2"
           />
 
-          <label className="mb-1 block text-sm font-medium">
-            Filtrar por cliente
-          </label>
+          <div className="mt-2 w-full max-w-md space-y-1">
+            {busquedaCliente.trim() !== "" &&
+              clientesFiltrados.map((cliente) => (
+                <button
+                  key={cliente.id}
+                  type="button"
+                  onClick={() => {
+                    setFiltroCliente(String(cliente.id));
+                    setBusquedaCliente(cliente.nombre);
+                  }}
+                  className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition hover:bg-muted ${
+                    filtroCliente === String(cliente.id)
+                      ? "bg-muted font-semibold"
+                      : "bg-background"
+                  }`}
+                >
+                  {cliente.nombre}
+                </button>
+              ))}
 
-          <select
-            value={filtroCliente}
-            onChange={(e) =>
-              setFiltroCliente(e.target.value)
-            }
-            className="w-full max-w-md rounded-lg border bg-background px-3 py-2"
-          >
-            <option value="TODOS">
-              Todos los clientes
-            </option>
+            {busquedaCliente.trim() !== "" &&
+              clientesFiltrados.length === 0 && (
+                <p className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">
+                  No se encontraron clientes.
+                </p>
+              )}
+          </div>
 
-            {clientesFiltrados.map((cliente) => (
-              <option
-                key={cliente.id}
-                value={cliente.id}
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Cliente seleccionado:
+            </span>
+
+            <span className="text-sm font-medium">
+              {filtroCliente === "TODOS"
+                ? "Todos los clientes"
+                : clientes.find(
+                    (cliente) =>
+                      String(cliente.id) === filtroCliente
+                  )?.nombre ?? "Cliente desconocido"}
+            </span>
+
+            {filtroCliente !== "TODOS" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFiltroCliente("TODOS");
+                  setBusquedaCliente("");
+                }}
+                className="rounded-lg border px-2 py-1 text-xs hover:bg-muted"
               >
-                {cliente.nombre}
-              </option>
-            ))}
-          </select>
+                Mostrar todos
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mb-5 flex flex-wrap gap-2">
@@ -733,11 +814,29 @@ export default function FotosPage() {
             className="relative max-h-[90vh] max-w-[90vw]"
             onClick={(event) => event.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={fotoAnterior}
+              className="absolute left-[-3.5rem] top-1/2 -translate-y-1/2 rounded-full bg-white px-4 py-3 text-xl font-bold text-black shadow-lg hover:bg-gray-100"
+              aria-label="Foto anterior"
+            >
+              ←
+            </button>
+
             <img
               src={fotoSeleccionada.url}
               alt="Foto ampliada"
               className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
             />
+
+            <button
+              type="button"
+              onClick={fotoSiguiente}
+              className="absolute right-[-3.5rem] top-1/2 -translate-y-1/2 rounded-full bg-white px-4 py-3 text-xl font-bold text-black shadow-lg hover:bg-gray-100"
+              aria-label="Foto siguiente"
+            >
+              →
+            </button>
 
             <div className="mt-2 rounded-lg bg-black/70 p-3 text-center text-white">
               <p className="font-semibold">

@@ -76,6 +76,20 @@ export async function GET(request: Request) {
         creadoEn: true,
         clienteId: true,
         tatuajeId: true,
+
+        cliente: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+
+        tatuaje: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
       },
     });
 
