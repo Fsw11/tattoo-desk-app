@@ -105,6 +105,9 @@ export default function FotosPage() {
   const [filtroCliente, setFiltroCliente] =
     useState("TODOS");
 
+  const [filtroTatuaje, setFiltroTatuaje] =
+    useState("TODOS");
+
   const [busquedaCliente, setBusquedaCliente] =
     useState("");
 
@@ -251,6 +254,14 @@ export default function FotosPage() {
           Number(clienteId)
     );
 
+  const tatuajesFiltro =
+    filtroCliente === "TODOS"
+      ? tatuajes
+      : tatuajes.filter(
+          (tatuaje) =>
+            String(tatuaje.clienteId) === filtroCliente
+        );
+
   const fotosFiltradas =
     fotos.filter((foto) => {
       const coincideCliente =
@@ -261,7 +272,15 @@ export default function FotosPage() {
         filtroTipo === "TODAS" ||
         foto.tipo === filtroTipo;
 
-      return coincideCliente && coincideTipo;
+      const coincideTatuaje =
+        filtroTatuaje === "TODOS" ||
+        String(foto.tatuaje?.id) === filtroTatuaje;
+
+      return (
+        coincideCliente &&
+        coincideTipo &&
+        coincideTatuaje
+      );
     });
 
   function fotoAnterior() {
@@ -660,6 +679,7 @@ export default function FotosPage() {
                   type="button"
                   onClick={() => {
                     setFiltroCliente(String(cliente.id));
+                    setFiltroTatuaje("TODOS");
                     setBusquedaCliente(cliente.nombre);
                   }}
                   className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition hover:bg-muted ${
@@ -680,6 +700,35 @@ export default function FotosPage() {
               )}
           </div>
 
+          {filtroCliente !== "TODOS" && (
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-medium">
+                Filtrar por tatuaje
+              </label>
+
+              <select
+                value={filtroTatuaje}
+                onChange={(e) =>
+                  setFiltroTatuaje(e.target.value)
+                }
+                className="w-full max-w-md rounded-lg border bg-background px-3 py-2"
+              >
+                <option value="TODOS">
+                  Todos los tatuajes
+                </option>
+
+                {tatuajesFiltro.map((tatuaje) => (
+                  <option
+                    key={tatuaje.id}
+                    value={tatuaje.id}
+                  >
+                    {tatuaje.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="mt-3 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               Cliente seleccionado:
@@ -699,6 +748,7 @@ export default function FotosPage() {
                 type="button"
                 onClick={() => {
                   setFiltroCliente("TODOS");
+                  setFiltroTatuaje("TODOS");
                   setBusquedaCliente("");
                 }}
                 className="rounded-lg border px-2 py-1 text-xs hover:bg-muted"
