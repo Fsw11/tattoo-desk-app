@@ -970,8 +970,8 @@ export default function FotosPage() {
 
             <img
               src={fotoSeleccionada.url}
-              alt="Foto ampliada"
-              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+              alt={`Foto de ${fotoSeleccionada.cliente?.nombre ?? "cliente"}`}
+              className="max-h-[82vh] max-w-[90vw] rounded-lg object-contain"
             />
 
             <button
@@ -983,36 +983,42 @@ export default function FotosPage() {
               →
             </button>
 
-            <div className="mt-2 rounded-lg bg-black/70 p-3 text-center text-white">
-              <p className="font-semibold">
+            <div className="mt-3 w-full max-w-2xl rounded-xl bg-black/75 p-4 text-center text-white shadow-lg">
+              <p className="text-base font-semibold">
                 {fotoSeleccionada.cliente?.nombre ?? "Cliente desconocido"}
               </p>
 
-              {fotoSeleccionada.tatuaje && (
-                <p className="text-sm text-white/80">
+              {fotoSeleccionada.tatuaje ? (
+                <p className="mt-1 text-sm font-medium">
                   Tatuaje: {fotoSeleccionada.tatuaje.nombre}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-white/70">
+                  Foto general
                 </p>
               )}
 
-              <p className="text-sm">
-                {fotoSeleccionada.tipo}
-              </p>
+              <div className="mt-2">
+                <span className="inline-flex rounded-full border border-white/30 px-2.5 py-1 text-xs font-semibold uppercase">
+                  {fotoSeleccionada.tipo}
+                </span>
+              </div>
+
+              {fotoSeleccionada.descripcion && (
+                <p className="mt-3 text-sm leading-relaxed text-white/80">
+                  {fotoSeleccionada.descripcion}
+                </p>
+              )}
 
               <button
                 type="button"
                 onClick={() =>
                   eliminarFoto(fotoSeleccionada.id)
                 }
-                className="mt-3 rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10"
+                className="mt-4 rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
               >
                 Eliminar foto
               </button>
-
-              {fotoSeleccionada.descripcion && (
-                <p className="mt-1 text-sm text-white/80">
-                  {fotoSeleccionada.descripcion}
-                </p>
-              )}
             </div>
           </div>
         </div>
