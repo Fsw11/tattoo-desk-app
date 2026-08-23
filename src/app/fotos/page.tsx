@@ -265,9 +265,13 @@ export default function FotosPage() {
     });
 
   const cantidadFotosPorTipo = (tipo: string) =>
-    fotos.filter(
-      (foto) => foto.tipo === tipo
-    ).length;
+    fotos.filter((foto) => {
+      const coincideCliente =
+        filtroCliente === "TODOS" ||
+        String(foto.cliente?.id) === filtroCliente;
+
+      return coincideCliente && foto.tipo === tipo;
+    }).length;
 
   function limpiar() {
     setArchivo(null);
@@ -635,7 +639,10 @@ export default function FotosPage() {
           ].map((filtro) => {
             const cantidad =
               filtro.valor === "TODAS"
-                ? fotos.length
+                ? fotos.filter((foto) =>
+                    filtroCliente === "TODOS" ||
+                    String(foto.cliente?.id) === filtroCliente
+                  ).length
                 : cantidadFotosPorTipo(filtro.valor);
 
             return (
@@ -677,6 +684,12 @@ export default function FotosPage() {
                 <p className="font-semibold">
                   {foto.cliente?.nombre ?? "Cliente desconocido"}
                 </p>
+
+                {foto.tatuaje && (
+                  <p className="text-sm text-muted-foreground">
+                    Tatuaje: {foto.tatuaje.nombre}
+                  </p>
+                )}
 
                 <p className="text-sm">
                   {foto.tipo}
