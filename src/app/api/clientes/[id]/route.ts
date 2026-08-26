@@ -58,6 +58,53 @@ export async function GET(
       notas: true,
       creadoEn: true,
       actualizadoEn: true,
+
+      citas: {
+        orderBy: {
+          fecha: "desc",
+        },
+        select: {
+          id: true,
+          fecha: true,
+          duracion: true,
+          motivo: true,
+          notas: true,
+          estado: true,
+        },
+      },
+
+      tatuajes: {
+        orderBy: {
+          creadoEn: "desc",
+        },
+        select: {
+          id: true,
+          nombre: true,
+          descripcion: true,
+          estilo: true,
+          zona: true,
+          precio: true,
+          anticipo: true,
+          estado: true,
+          notas: true,
+          creadoEn: true,
+        },
+      },
+
+      pagos: {
+        orderBy: {
+          fecha: "desc",
+        },
+        select: {
+          id: true,
+          monto: true,
+          concepto: true,
+          notas: true,
+          metodo: true,
+          fecha: true,
+          tatuajeId: true,
+        },
+      },
     },
   });
 

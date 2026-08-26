@@ -16,6 +16,38 @@ type Cliente = {
   notas: string | null;
   creadoEn: string;
   actualizadoEn: string;
+
+  citas: {
+    id: number;
+    fecha: string;
+    duracion: number;
+    motivo: string | null;
+    notas: string | null;
+    estado: string;
+  }[];
+
+  tatuajes: {
+    id: number;
+    nombre: string;
+    descripcion: string | null;
+    estilo: string | null;
+    zona: string | null;
+    precio: string | number | null;
+    anticipo: string | number | null;
+    estado: string;
+    notas: string | null;
+    creadoEn: string;
+  }[];
+
+  pagos: {
+    id: number;
+    monto: string | number;
+    concepto: string | null;
+    notas: string | null;
+    metodo: string;
+    fecha: string;
+    tatuajeId: number | null;
+  }[];
 };
 
 export default function ClientePage() {
@@ -510,7 +542,7 @@ export default function ClientePage() {
                     Citas
                   </p>
                   <p className="mt-1 text-2xl font-bold">
-                    Próximamente
+                    {cliente.citas.length}
                   </p>
                 </div>
 
@@ -519,7 +551,7 @@ export default function ClientePage() {
                     Tatuajes
                   </p>
                   <p className="mt-1 text-2xl font-bold">
-                    Próximamente
+                    {cliente.tatuajes.length}
                   </p>
                 </div>
 
@@ -528,8 +560,129 @@ export default function ClientePage() {
                     Pagos
                   </p>
                   <p className="mt-1 text-2xl font-bold">
-                    Próximamente
+                    {cliente.pagos.length}
                   </p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-6">
+                <div>
+                  <h3 className="mb-3 font-semibold">
+                    Últimas citas
+                  </h3>
+
+                  {cliente.citas.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No hay citas registradas.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {cliente.citas.slice(0, 5).map((cita) => (
+                        <div
+                          key={cita.id}
+                          className="rounded-lg border p-3"
+                        >
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="font-medium">
+                              {new Date(cita.fecha).toLocaleString(
+                                "es-MX",
+                                {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                }
+                              )}
+                            </p>
+
+                            <span className="text-xs font-semibold uppercase text-muted-foreground">
+                              {cita.estado}
+                            </span>
+                          </div>
+
+                          {cita.motivo && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {cita.motivo}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="mb-3 font-semibold">
+                    Tatuajes
+                  </h3>
+
+                  {cliente.tatuajes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No hay tatuajes registrados.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {cliente.tatuajes.slice(0, 5).map((tatuaje) => (
+                        <div
+                          key={tatuaje.id}
+                          className="rounded-lg border p-3"
+                        >
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="font-medium">
+                              {tatuaje.nombre}
+                            </p>
+
+                            <span className="text-xs font-semibold uppercase text-muted-foreground">
+                              {tatuaje.estado}
+                            </span>
+                          </div>
+
+                          {(tatuaje.zona || tatuaje.estilo) && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {[tatuaje.zona, tatuaje.estilo]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="mb-3 font-semibold">
+                    Últimos pagos
+                  </h3>
+
+                  {cliente.pagos.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No hay pagos registrados.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {cliente.pagos.slice(0, 5).map((pago) => (
+                        <div
+                          key={pago.id}
+                          className="rounded-lg border p-3"
+                        >
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="font-medium">
+                              ${Number(pago.monto).toFixed(2)}
+                            </p>
+
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(pago.fecha).toLocaleDateString(
+                                "es-MX"
+                              )}
+                            </span>
+                          </div>
+
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {pago.concepto || pago.metodo}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
