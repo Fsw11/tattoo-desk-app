@@ -602,8 +602,8 @@ export default function ClientesPage() {
     }
   }
   return (
-    <main className="min-h-screen bg-muted/40 p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <main className="min-h-screen bg-muted/40 p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-4 md:space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Gestión del estudio</p>
@@ -633,7 +633,7 @@ export default function ClientesPage() {
         )}
 
         {mostrarFormulario && (
-          <section className="rounded-xl border bg-background p-6">
+          <section className="rounded-xl border bg-background p-4 md:p-6">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Nuevo cliente</h2>
 
@@ -760,7 +760,7 @@ export default function ClientesPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -768,7 +768,7 @@ export default function ClientesPage() {
                     setMostrarFormulario(false);
                     setError("");
                   }}
-                  className="rounded-lg border px-4 py-2"
+                  className="rounded-lg border px-4 py-2 w-full sm:w-auto"
                 >
                   Cancelar
                 </button>
@@ -776,7 +776,7 @@ export default function ClientesPage() {
                 <button
                   type="submit"
                   disabled={guardando}
-                  className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50 w-full sm:w-auto"
                 >
                   {guardando ? "Guardando..." : "Guardar cliente"}
                 </button>
@@ -786,7 +786,7 @@ export default function ClientesPage() {
         )}
 
         {clienteEditando && (
-          <section className="rounded-xl border bg-background p-6">
+          <section className="rounded-xl border bg-background p-4 md:p-6">
             <div className="mb-5">
               <p className="text-sm text-muted-foreground">Editando cliente</p>
 
@@ -897,11 +897,11 @@ export default function ClientesPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={cancelarEdicion}
-                  className="rounded-lg border px-4 py-2"
+                  className="rounded-lg border px-4 py-2 w-full sm:w-auto"
                 >
                   Cancelar
                 </button>
@@ -909,7 +909,7 @@ export default function ClientesPage() {
                 <button
                   type="submit"
                   disabled={guardando}
-                  className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50 w-full sm:w-auto"
                 >
                   {guardando ? "Guardando..." : "Guardar cambios"}
                 </button>
@@ -920,7 +920,7 @@ export default function ClientesPage() {
 
         <section className="space-y-4">
           {cargando && (
-            <div className="rounded-xl border bg-background p-6">
+            <div className="rounded-xl border bg-background p-4 md:p-6">
               Cargando clientes...
             </div>
           )}
@@ -948,7 +948,7 @@ export default function ClientesPage() {
               return (
                 <article
                   key={cliente.id}
-                  className="rounded-xl border bg-background p-5"
+                  className="rounded-xl border bg-background p-4 md:p-5"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -969,7 +969,7 @@ export default function ClientesPage() {
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <button
                         type="button"
                         onClick={() => {
@@ -977,7 +977,7 @@ export default function ClientesPage() {
                             clienteAbierto === cliente.id ? null : cliente.id
                           );
                         }}
-                        className="rounded-lg border px-4 py-2"
+                        className="rounded-lg border px-4 py-2 w-full sm:w-auto"
                       >
                         {clienteAbierto === cliente.id
                           ? "Cerrar ficha"
@@ -987,7 +987,7 @@ export default function ClientesPage() {
                       <button
                         type="button"
                         onClick={() => abrirEdicion(cliente)}
-                        className="rounded-lg border px-4 py-2"
+                        className="rounded-lg border px-4 py-2 w-full sm:w-auto"
                       >
                         Editar
                       </button>
@@ -1000,7 +1000,7 @@ export default function ClientesPage() {
                           Información del cliente
                         </h3>
 
-                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           {cliente.instagram && (
                             <div className="rounded-lg border p-4">
                               <p className="text-sm text-muted-foreground">
@@ -1040,7 +1040,7 @@ export default function ClientesPage() {
                           )}
 
                           {cliente.notas && (
-                            <div className="rounded-lg border p-4 md:col-span-2">
+                            <div className="rounded-lg border p-4 sm:col-span-2">
                               <p className="text-sm text-muted-foreground">
                                 Notas
                               </p>
@@ -1055,7 +1055,7 @@ export default function ClientesPage() {
                           Galería del cliente
                         </h3>
 
-                        <div className="mt-4 flex justify-end">
+                        <div className="mt-4 flex flex-col sm:flex-row sm:justify-end">
                           <button
                             type="button"
                             onClick={() => {
@@ -1067,7 +1067,7 @@ export default function ClientesPage() {
                                   : cliente.id
                               );
                             }}
-                            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+                            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground w-full sm:w-auto"
                           >
                             {mostrarFormularioFoto === cliente.id
                               ? "Cancelar"
@@ -1076,12 +1076,12 @@ export default function ClientesPage() {
                         </div>
 
                         {mostrarFormularioFoto === cliente.id && (
-                          <section className="mt-4 rounded-xl border bg-muted/30 p-5">
+                          <section className="mt-4 rounded-xl border bg-muted/30 p-4 md:p-5">
                             <h4 className="mb-4 font-semibold">
                               Nueva foto del cliente
                             </h4>
 
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid gap-4 sm:grid-cols-2">
                               <div className="md:col-span-2">
                                 <label className="mb-1 block text-sm font-medium">
                                   URL de imagen *
@@ -1115,7 +1115,7 @@ export default function ClientesPage() {
                                     <img
                                       src={fotoVistaPrevia}
                                       alt="Vista previa"
-                                      className="h-48 w-full rounded-lg border object-cover"
+                                      className="h-40 sm:h-48 w-full rounded-lg border object-cover"
                                     />
                                   </div>
                                 )}
@@ -1171,7 +1171,7 @@ export default function ClientesPage() {
                                 type="button"
                                 disabled={guardandoFoto}
                                 onClick={() => crearFoto(cliente.id)}
-                                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50 w-full sm:w-auto"
                               >
                                 {guardandoFoto
                                   ? "Guardando..."
@@ -1230,7 +1230,7 @@ export default function ClientesPage() {
                               !mostrarFormularioTatuaje
                             );
                           }}
-                          className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
+                          className="rounded-lg bg-primary px-4 py-2 text-primary-foreground w-full sm:w-auto"
                         >
                           {mostrarFormularioTatuaje
                             ? "Cancelar"
@@ -1239,12 +1239,12 @@ export default function ClientesPage() {
                       </div>
 
                       {mostrarFormularioTatuaje && (
-                        <section className="rounded-xl border bg-background p-5">
+                        <section className="rounded-xl border bg-background p-4 md:p-5">
                           <h3 className="mb-4 text-lg font-semibold">
                             Nuevo tatuaje para {cliente.nombre}
                           </h3>
 
-                          <div className="grid gap-4 md:grid-cols-2">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <input
                               placeholder="Nombre del tatuaje"
                               value={tatuajeNombre}
@@ -1320,7 +1320,7 @@ export default function ClientesPage() {
                               type="button"
                               disabled={guardandoTatuaje}
                               onClick={() => crearTatuaje(cliente.id)}
-                              className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                              className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50 w-full sm:w-auto"
                             >
                               {guardandoTatuaje
                                 ? "Guardando..."
@@ -1603,9 +1603,9 @@ export default function ClientesPage() {
                                           event.preventDefault();
                                           crearPago(cliente.id, tatuaje.id);
                                         }}
-                                        className="mt-4 rounded-xl border bg-muted/30 p-5"
+                                        className="mt-4 rounded-xl border bg-muted/30 p-4 md:p-5"
                                       >
-                                        <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="grid gap-4 sm:grid-cols-2">
                                           <div>
                                             <label className="mb-1 block text-sm font-medium">
                                               Monto *
@@ -1699,7 +1699,7 @@ export default function ClientesPage() {
                                               setPagoMetodo("EFECTIVO");
                                               setError("");
                                             }}
-                                            className="rounded-lg border px-4 py-2"
+                                            className="rounded-lg border px-4 py-2 w-full sm:w-auto"
                                           >
                                             Cancelar
                                           </button>
@@ -1707,7 +1707,7 @@ export default function ClientesPage() {
                                           <button
                                             type="submit"
                                             disabled={guardandoPago}
-                                            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                                            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50 w-full sm:w-auto"
                                           >
                                             {guardandoPago
                                               ? "Guardando..."
@@ -1728,8 +1728,8 @@ export default function ClientesPage() {
                                         Sin pagos registrados.
                                       </p>
                                     ) : (
-                                      <div className="overflow-x-auto">
-                                        <table className="w-full">
+                                      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                                        <table className="w-full min-w-[600px]">
                                           <thead>
                                             <tr className="border-b text-left text-sm">
                                               <th className="px-3 py-2">

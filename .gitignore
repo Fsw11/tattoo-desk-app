@@ -43,3 +43,11 @@ next-env.d.ts
 /src/generated/prisma
 
 public/uploads/
+
+# ==========================================
+# BACKUPS Y ARCHIVOS TEMPORALES
+# ==========================================
+*.backup
+*.bak
+*.tmp
+.backup-*/
