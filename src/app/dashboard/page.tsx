@@ -1,11 +1,13 @@
-import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import QuickAction from "@/components/dashboard/QuickAction";
 import AppointmentCard from "@/components/dashboard/AppointmentCard";
 import StudioHeader from "@/components/dashboard/StudioHeader";
+import DashboardChart from "@/components/dashboard/DashboardChart";
+
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -17,18 +19,54 @@ export default async function DashboardPage() {
   const estudioId = session.user.estudioId;
 
 
+  // ========================================
+  // FECHAS
+  // ========================================
+
+  const ahora = new Date();
+
+  const inicioHoy = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    ahora.getDate()
+  );
+
+  const finHoy = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    ahora.getDate() + 1
+  );
+
+  const inicioMes = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    1
+  );
+
+  const inicioSiguienteMes = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth() + 1,
+    1
+  );
+
+
+  // ========================================
+  // CONSULTAS
+  // ========================================
+
   const [
     clientes,
     citasPendientes,
+    citasHoy,
     tatuajesActivos,
-    ingresos,
-    gastos,
     stockBajo,
+    productosStockBajo,
     proximasCitas,
     configuracion,
     suscripcion,
   ] = await Promise.all([
 
+    // CLIENTES
     prisma.cliente.count({
       where: {
         estudioId,
@@ -36,6 +74,7 @@ export default async function DashboardPage() {
     }),
 
 
+    // CITAS PENDIENTES
     prisma.cita.count({
       where: {
         estudioId,
@@ -44,6 +83,19 @@ export default async function DashboardPage() {
     }),
 
 
+    // CITAS DE HOY
+    prisma.cita.count({
+      where: {
+        estudioId,
+        fecha: {
+          gte: inicioHoy,
+          lt: finHoy,
+        },
+      },
+    }),
+
+
+    // TATUAJES ACTIVOS
     prisma.tatuaje.count({
       where: {
         estudioId,
@@ -57,26 +109,7 @@ export default async function DashboardPage() {
     }),
 
 
-    prisma.pago.aggregate({
-      where: {
-        estudioId,
-      },
-      _sum: {
-        monto: true,
-      },
-    }),
-
-
-    prisma.gasto.aggregate({
-      where: {
-        estudioId,
-      },
-      _sum: {
-        monto: true,
-      },
-    }),
-
-
+    // TOTAL STOCK BAJO
     prisma.inventario.count({
       where: {
         estudioId,
@@ -88,11 +121,28 @@ export default async function DashboardPage() {
     }),
 
 
+    // PRODUCTOS CON STOCK BAJO
+    prisma.inventario.findMany({
+      where: {
+        estudioId,
+        activo: true,
+        cantidad: {
+          lte: prisma.inventario.fields.minimo,
+        },
+      },
+      orderBy: {
+        cantidad: "asc",
+      },
+      take: 5,
+    }),
+
+
+    // PROXIMAS CITAS
     prisma.cita.findMany({
       where: {
         estudioId,
         fecha: {
-          gte: new Date(),
+          gte: ahora,
         },
       },
       include: {
@@ -104,43 +154,37 @@ export default async function DashboardPage() {
       take: 5,
     }),
 
+
+    // CONFIGURACION
     prisma.configuracionEstudio.findUnique({
       where: {
         estudioId,
       },
     }),
 
+
+    // SUSCRIPCION
     prisma.suscripcion.findUnique({
       where: {
         estudioId,
       },
     }),
 
+
+
+
   ]);
 
-
-  const totalIngresos =
-    Number(
-      ingresos._sum.monto ?? 0
-    );
-
-
-  const totalGastos =
-    Number(
-      gastos._sum.monto ?? 0
-    );
-
-
-  const utilidad =
-    totalIngresos - totalGastos;
 
 
 
   return (
-    <main className="min-h-screen bg-muted/40 p-6">
+    <main className="min-h-screen bg-muted/40 p-4 md:p-6">
 
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl space-y-6 md:space-y-8">
 
+
+        {/* ENCABEZADO */}
 
         <StudioHeader
           nombre={session.user.name ?? "Tattoo Desk"}
@@ -152,57 +196,60 @@ export default async function DashboardPage() {
         />
 
 
+        {/* RESUMEN GENERAL */}
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <section>
 
-          <DashboardCard
-            titulo="Clientes"
-            valor={clientes.toString()}
-          />
+          <div className="mb-4">
 
+            <h2 className="text-xl font-semibold">
+              Resumen general
+            </h2>
 
-          <DashboardCard
-            titulo="Citas pendientes"
-            valor={citasPendientes.toString()}
-          />
+            <p className="text-sm text-muted-foreground">
+              Estado actual de tu estudio
+            </p>
 
-
-          <DashboardCard
-            titulo="Tatuajes activos"
-            valor={tatuajesActivos.toString()}
-          />
+          </div>
 
 
-          <DashboardCard
-            titulo="Stock bajo"
-            valor={stockBajo.toString()}
-          />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 
+            <DashboardCard
+              titulo="Clientes"
+              valor={clientes.toString()}
+            />
 
-          <DashboardCard
-            titulo="Ingresos"
-            valor={formatoMoneda(totalIngresos)}
-          />
+            <DashboardCard
+              titulo="Citas pendientes"
+              valor={citasPendientes.toString()}
+            />
 
+            <DashboardCard
+              titulo="Citas hoy"
+              valor={citasHoy.toString()}
+            />
 
-          <DashboardCard
-            titulo="Gastos"
-            valor={formatoMoneda(totalGastos)}
-          />
+            <DashboardCard
+              titulo="Tatuajes activos"
+              valor={tatuajesActivos.toString()}
+            />
 
-
-          <DashboardCard
-            titulo="Utilidad"
-            valor={formatoMoneda(utilidad)}
-          />
+          </div>
 
         </section>
-                <section>
+
+
+        {/* ACCESOS RAPIDOS */}
+
+        <section>
+
           <h2 className="mb-4 text-xl font-semibold">
             Accesos rápidos
           </h2>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
 
             <QuickAction
               titulo="Clientes"
@@ -233,44 +280,165 @@ export default async function DashboardPage() {
             />
 
             <QuickAction
-              titulo="Movimientos"
-              descripcion="Entradas y salidas"
-              href="/inventario/movimientos"
-              icono="↕️"
+              titulo="Finanzas"
+              descripcion="Ingresos y gastos"
+              href="/finanzas"
+              icono="💰"
             />
 
           </div>
+
         </section>
 
 
+        {/* DOS COLUMNAS */}
 
-        <section className="rounded-xl border bg-background p-6">
-
-          <h2 className="mb-4 text-xl font-semibold">
-            Próximas citas
-          </h2>
+        <section className="grid gap-6 lg:grid-cols-2">
 
 
-          {proximasCitas.length === 0 ? (
+          {/* PROXIMAS CITAS */}
 
-            <p className="text-sm text-muted-foreground">
-              No hay próximas citas.
-            </p>
+          <div className="rounded-2xl border bg-background p-4 sm:p-5 md:p-6">
 
-          ) : (
+            <div className="mb-5 flex items-center justify-between">
 
-            <div className="space-y-3">
+              <div>
 
-              {proximasCitas.map((cita) => (
-                <AppointmentCard
-                  key={cita.id}
-                  cita={cita}
-                />
-              ))}
+                <h2 className="text-xl font-semibold">
+                  Próximas citas
+                </h2>
+
+                <p className="text-sm text-muted-foreground">
+                  Las siguientes citas programadas
+                </p>
+
+              </div>
 
             </div>
 
-          )}
+
+            {proximasCitas.length === 0 ? (
+
+              <div className="py-10 text-center">
+
+                <p className="text-3xl">
+                  📅
+                </p>
+
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No hay próximas citas.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="space-y-3">
+
+                {proximasCitas.map((cita) => (
+                  <AppointmentCard
+                    key={cita.id}
+                    cita={cita}
+                  />
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
+
+
+          {/* ALERTA INVENTARIO */}
+
+          <div className="rounded-2xl border bg-background p-4 sm:p-5 md:p-6">
+
+            <div className="mb-5">
+
+              <h2 className="text-xl font-semibold">
+                Inventario
+              </h2>
+
+              <p className="text-sm text-muted-foreground">
+                Productos que requieren atención
+              </p>
+
+            </div>
+
+
+            {stockBajo === 0 ? (
+
+              <div className="py-10 text-center">
+
+                <p className="text-3xl">
+                  ✅
+                </p>
+
+                <p className="mt-3 font-medium">
+                  Inventario en buen estado
+                </p>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No hay productos con stock bajo.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="space-y-3">
+
+                {productosStockBajo.map((producto) => (
+
+                  <div
+                    key={producto.id}
+                    className="flex items-center justify-between rounded-xl border p-4"
+                  >
+
+                    <div>
+
+                      <p className="font-medium">
+                        {producto.nombre}
+                      </p>
+
+                      <p className="text-sm text-muted-foreground">
+                        Stock mínimo: {Number(producto.minimo)}
+                      </p>
+
+                    </div>
+
+
+                    <div className="text-right">
+
+                      <p className="text-lg font-bold">
+                        {Number(producto.cantidad)}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground">
+                        disponibles
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+
+                {stockBajo > 5 && (
+
+                  <p className="pt-2 text-center text-sm text-muted-foreground">
+                    + {stockBajo - 5} productos más requieren atención
+                  </p>
+
+                )}
+
+              </div>
+
+            )}
+
+          </div>
+
 
         </section>
 
@@ -281,19 +449,3 @@ export default async function DashboardPage() {
   );
 }
 
-
-
-function formatoMoneda(
-  cantidad: number
-) {
-
-  return cantidad.toLocaleString(
-    "es-MX",
-    {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 2,
-    }
-  );
-
-}
