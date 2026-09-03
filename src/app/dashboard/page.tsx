@@ -2,6 +2,10 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import DashboardCard from "@/components/dashboard/DashboardCard";
+import QuickAction from "@/components/dashboard/QuickAction";
+import AppointmentCard from "@/components/dashboard/AppointmentCard";
+import StudioHeader from "@/components/dashboard/StudioHeader";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -21,6 +25,8 @@ export default async function DashboardPage() {
     gastos,
     stockBajo,
     proximasCitas,
+    configuracion,
+    suscripcion,
   ] = await Promise.all([
 
     prisma.cliente.count({
@@ -98,6 +104,18 @@ export default async function DashboardPage() {
       take: 5,
     }),
 
+    prisma.configuracionEstudio.findUnique({
+      where: {
+        estudioId,
+      },
+    }),
+
+    prisma.suscripcion.findUnique({
+      where: {
+        estudioId,
+      },
+    }),
+
   ]);
 
 
@@ -124,23 +142,14 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-7xl space-y-8">
 
 
-        <header>
-
-          <p className="text-sm text-muted-foreground">
-            Panel administrativo
-          </p>
-
-
-          <h1 className="text-3xl font-bold">
-            {session.user.name}
-          </h1>
-
-
-          <p className="text-sm text-muted-foreground">
-            {session.user.email}
-          </p>
-
-        </header>
+        <StudioHeader
+          nombre={session.user.name ?? "Tattoo Desk"}
+          logoUrl={configuracion?.logoUrl}
+          nombreMostrar={configuracion?.nombreMostrar}
+          plan={suscripcion?.plan}
+          usuario={session.user.name}
+          email={session.user.email}
+        />
 
 
 
@@ -195,34 +204,39 @@ export default async function DashboardPage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
 
-            <MenuCard
+            <QuickAction
               titulo="Clientes"
               descripcion="Gestionar clientes"
               href="/clientes"
+              icono="👤"
             />
 
-            <MenuCard
+            <QuickAction
               titulo="Citas"
               descripcion="Agenda del estudio"
               href="/citas"
+              icono="📅"
             />
 
-            <MenuCard
+            <QuickAction
               titulo="Tatuajes"
               descripcion="Trabajos activos"
               href="/tatuajes"
+              icono="🎨"
             />
 
-            <MenuCard
+            <QuickAction
               titulo="Inventario"
               descripcion="Materiales y stock"
               href="/inventario"
+              icono="📦"
             />
 
-            <MenuCard
+            <QuickAction
               titulo="Movimientos"
               descripcion="Entradas y salidas"
               href="/inventario/movimientos"
+              icono="↕️"
             />
 
           </div>
@@ -248,34 +262,10 @@ export default async function DashboardPage() {
             <div className="space-y-3">
 
               {proximasCitas.map((cita) => (
-
-                <div
+                <AppointmentCard
                   key={cita.id}
-                  className="rounded-lg border p-4"
-                >
-
-                  <p className="font-semibold">
-                    {cita.cliente.nombre}
-                  </p>
-
-
-                  <p className="text-sm text-muted-foreground">
-
-                    {new Date(
-                      cita.fecha
-                    ).toLocaleString(
-                      "es-MX"
-                    )}
-
-                  </p>
-
-
-                  <p className="text-sm">
-                    Estado: {cita.estado}
-                  </p>
-
-                </div>
-
+                  cita={cita}
+                />
               ))}
 
             </div>
@@ -304,70 +294,6 @@ function formatoMoneda(
       currency: "MXN",
       minimumFractionDigits: 2,
     }
-  );
-
-}
-
-
-
-function DashboardCard({
-  titulo,
-  valor,
-}: {
-  titulo: string;
-  valor: string;
-}) {
-
-  return (
-
-    <div className="rounded-xl border bg-background p-5">
-
-      <p className="text-sm text-muted-foreground">
-        {titulo}
-      </p>
-
-
-      <p className="mt-2 text-2xl font-bold">
-        {valor}
-      </p>
-
-    </div>
-
-  );
-
-}
-
-
-
-function MenuCard({
-  titulo,
-  descripcion,
-  href,
-}: {
-  titulo: string;
-  descripcion: string;
-  href: string;
-}) {
-
-  return (
-
-    <Link
-      href={href}
-      className="rounded-xl border bg-background p-5 transition hover:bg-muted"
-    >
-
-      <h3 className="font-semibold">
-        {titulo}
-      </h3>
-
-
-      <p className="mt-1 text-sm text-muted-foreground">
-        {descripcion}
-      </p>
-
-
-    </Link>
-
   );
 
 }

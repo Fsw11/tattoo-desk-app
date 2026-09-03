@@ -141,9 +141,8 @@ model Tatuaje {
   usuarioId Int?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
-  fotos        Foto[]
-  pagos        Pago[]
-  movimientosInventario MovimientoInventario[]
+  fotos Foto[]
+  pagos Pago[]
 
   @@index([estudioId])
   @@index([clienteId])
@@ -255,11 +254,6 @@ model MovimientoInventario {
   id       Int                      @id @default(autoincrement())
   tipo     TipoMovimientoInventario
   cantidad Decimal                  @db.Decimal(10, 2)
-
-  // Costos para análisis financiero
-  costoUnitario Decimal?            @db.Decimal(10, 2)
-  costoTotal    Decimal?            @db.Decimal(10, 2)
-
   motivo   String?
   fecha    DateTime                 @default(now())
 
@@ -269,17 +263,11 @@ model MovimientoInventario {
   inventarioId Int
   inventario   Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
 
-  // Relación opcional para conocer el material usado
-  // específicamente en cada tatuaje
-  tatuajeId Int?
-  tatuaje   Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: SetNull)
-
   usuarioId Int?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@index([estudioId])
   @@index([inventarioId])
-  @@index([tatuajeId])
 }
 
 // ========================================

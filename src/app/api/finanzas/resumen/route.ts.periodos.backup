@@ -1,0 +1,220 @@
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+
+// ========================================
+// RESUMEN FINANCIERO INTEGRADO
+// ========================================
+
+export async function GET() {
+  try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          error: "No autorizado",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const estudioId = session.user.estudioId;
+
+
+    // ========================================
+    // INGRESOS
+    // ========================================
+
+    const pagos =
+      await prisma.pago.findMany({
+        where: {
+          estudioId,
+        },
+        select: {
+          monto: true,
+          fecha: true,
+        },
+      });
+
+
+    const totalIngresos =
+      pagos.reduce(
+        (total, pago) =>
+          total + Number(pago.monto),
+        0
+      );
+
+
+    // ========================================
+    // GASTOS OPERATIVOS
+    // ========================================
+
+    const gastos =
+      await prisma.gasto.findMany({
+        where: {
+          estudioId,
+        },
+        select: {
+          monto: true,
+          fecha: true,
+          categoria: true,
+        },
+      });
+
+
+    const totalGastosOperativos =
+      gastos.reduce(
+        (total, gasto) =>
+          total + Number(gasto.monto),
+        0
+      );
+
+
+    // ========================================
+    // COSTO DE MATERIALES
+    // Solo SALIDAS del inventario
+    // ========================================
+
+    const movimientos =
+      await prisma.movimientoInventario.findMany({
+        where: {
+          estudioId,
+          tipo: "SALIDA",
+        },
+        select: {
+          costoTotal: true,
+          tatuajeId: true,
+          fecha: true,
+          inventario: {
+            select: {
+              nombre: true,
+            },
+          },
+        },
+      });
+
+
+    let costoMateriales =
+      0;
+
+    let costoMaterialesTatuajes =
+      0;
+
+    let costoMaterialesGenerales =
+      0;
+
+
+    for (const movimiento of movimientos) {
+
+      const costo =
+        Number(
+          movimiento.costoTotal ?? 0
+        );
+
+      costoMateriales += costo;
+
+
+      if (movimiento.tatuajeId) {
+
+        costoMaterialesTatuajes +=
+          costo;
+
+      } else {
+
+        costoMaterialesGenerales +=
+          costo;
+
+      }
+
+    }
+
+
+    // ========================================
+    // RESULTADOS
+    // ========================================
+
+    const utilidadBruta =
+      totalIngresos -
+      costoMaterialesTatuajes;
+
+
+    const gastosTotales =
+      totalGastosOperativos +
+      costoMateriales;
+
+
+    const utilidadNeta =
+      totalIngresos -
+      gastosTotales;
+
+
+    const margenUtilidad =
+      totalIngresos > 0
+        ? (utilidadNeta / totalIngresos) * 100
+        : 0;
+
+
+    return NextResponse.json({
+
+      ingresos: {
+        total: totalIngresos,
+        registros: pagos.length,
+      },
+
+
+      gastosOperativos: {
+        total: totalGastosOperativos,
+        registros: gastos.length,
+      },
+
+
+      materiales: {
+        total: costoMateriales,
+
+        utilizadosEnTatuajes:
+          costoMaterialesTatuajes,
+
+        usoGeneral:
+          costoMaterialesGenerales,
+
+        movimientos:
+          movimientos.length,
+      },
+
+
+      resultado: {
+
+        utilidadBruta,
+
+        gastosTotales,
+
+        utilidadNeta,
+
+        margenUtilidad,
+
+      },
+
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Error generando resumen financiero:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "No se pudo generar el resumen financiero.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}

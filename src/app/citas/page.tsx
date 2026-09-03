@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Modal from "@/components/ui/Modal";
 
 type Cliente = {
   id: number;
@@ -148,12 +149,479 @@ function claseEstado(estado: Cita["estado"]) {
   }
 }
 
+
+
+function SelectorFechaHora({
+  valor,
+  onChange,
+}: {
+  valor: string;
+  onChange: (valor: string) => void;
+}) {
+  const fechaSeleccionada = valor
+    ? new Date(valor)
+    : new Date();
+
+  const [mostrarFecha, setMostrarFecha] =
+    useState(false);
+
+  const [mesCalendario, setMesCalendario] =
+    useState(fechaSeleccionada.getMonth());
+
+  const [anioCalendario, setAnioCalendario] =
+    useState(fechaSeleccionada.getFullYear());
+
+  const mesesCalendario = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+
+  const horas = Array.from(
+    { length: 24 },
+    (_, i) => i
+  );
+
+  const minutos = [
+    "00",
+    "15",
+    "30",
+    "45",
+  ];
+
+  const [diaTemporal, setDiaTemporal] =
+    useState(fechaSeleccionada.getDate());
+
+  function abrirCalendario() {
+    setMesCalendario(
+      fechaSeleccionada.getMonth()
+    );
+
+    setAnioCalendario(
+      fechaSeleccionada.getFullYear()
+    );
+
+    setDiaTemporal(
+      fechaSeleccionada.getDate()
+    );
+
+    setMostrarFecha(true);
+  }
+
+  function confirmarFecha() {
+    const nueva = new Date(
+      anioCalendario,
+      mesCalendario,
+      diaTemporal,
+      fechaSeleccionada.getHours(),
+      fechaSeleccionada.getMinutes()
+    );
+
+    const resultado =
+      `${nueva.getFullYear()}-${String(
+        nueva.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        nueva.getDate()
+      ).padStart(2, "0")}T${String(
+        nueva.getHours()
+      ).padStart(2, "0")}:${String(
+        nueva.getMinutes()
+      ).padStart(2, "0")}`;
+
+    onChange(resultado);
+    setMostrarFecha(false);
+  }
+
+  function cambiarMes(valor: number) {
+    let nuevoMes =
+      mesCalendario + valor;
+
+    let nuevoAnio =
+      anioCalendario;
+
+    if (nuevoMes < 0) {
+      nuevoMes = 11;
+      nuevoAnio--;
+    }
+
+    if (nuevoMes > 11) {
+      nuevoMes = 0;
+      nuevoAnio++;
+    }
+
+    setMesCalendario(nuevoMes);
+    setAnioCalendario(nuevoAnio);
+
+    const diasDelNuevoMes =
+      new Date(
+        nuevoAnio,
+        nuevoMes + 1,
+        0
+      ).getDate();
+
+    if (diaTemporal > diasDelNuevoMes) {
+      setDiaTemporal(diasDelNuevoMes);
+    }
+  }
+
+  function cambiarHora(
+    hora: number,
+    minuto: string
+  ) {
+    const nueva =
+      new Date(fechaSeleccionada);
+
+    nueva.setHours(
+      hora,
+      Number(minuto),
+      0,
+      0
+    );
+
+    const resultado =
+      `${nueva.getFullYear()}-${String(
+        nueva.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        nueva.getDate()
+      ).padStart(2, "0")}T${String(
+        nueva.getHours()
+      ).padStart(2, "0")}:${String(
+        nueva.getMinutes()
+      ).padStart(2, "0")}`;
+
+    onChange(resultado);
+  }
+
+  const primerDia = new Date(
+    anioCalendario,
+    mesCalendario,
+    1
+  );
+
+  const diasMes = new Date(
+    anioCalendario,
+    mesCalendario + 1,
+    0
+  ).getDate();
+
+  const espacioInicial =
+    primerDia.getDay() === 0
+      ? 6
+      : primerDia.getDay() - 1;
+
+  const calendario: (
+    number | null
+  )[] = [];
+
+  for (
+    let i = 0;
+    i < espacioInicial;
+    i++
+  ) {
+    calendario.push(null);
+  }
+
+  for (
+    let i = 1;
+    i <= diasMes;
+    i++
+  ) {
+    calendario.push(i);
+  }
+
+  return (
+    <div className="space-y-3">
+
+      <button
+        type="button"
+        onClick={abrirCalendario}
+        className="w-full rounded-xl border bg-background px-4 py-3 text-left transition hover:bg-muted"
+      >
+        <span className="block text-xs text-muted-foreground">
+          Fecha de la cita
+        </span>
+
+        <span className="mt-1 block font-medium">
+          {fechaSeleccionada.toLocaleDateString(
+            "es-MX",
+            {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }
+          )}
+        </span>
+      </button>
+
+
+      <Modal
+        open={mostrarFecha}
+        onClose={() => setMostrarFecha(false)}
+        title="Seleccionar fecha"
+        size="md"
+      >
+
+        <div className="space-y-5">
+
+          <div className="flex items-center justify-between">
+
+            <button
+              type="button"
+              onClick={() =>
+                cambiarMes(-1)
+              }
+              className="rounded-lg border px-3 py-2 transition hover:bg-muted"
+              aria-label="Mes anterior"
+            >
+              ←
+            </button>
+
+
+            <div className="flex gap-2">
+
+              <select
+                value={mesCalendario}
+                onChange={(e) =>
+                  setMesCalendario(
+                    Number(e.target.value)
+                  )
+                }
+                className="rounded-lg border bg-background px-3 py-2"
+              >
+                {mesesCalendario.map(
+                  (mes, index) => (
+                    <option
+                      key={mes}
+                      value={index}
+                    >
+                      {mes}
+                    </option>
+                  )
+                )}
+              </select>
+
+
+              <select
+                value={anioCalendario}
+                onChange={(e) =>
+                  setAnioCalendario(
+                    Number(e.target.value)
+                  )
+                }
+                className="rounded-lg border bg-background px-3 py-2"
+              >
+                {Array.from(
+                  {
+                    length: 21,
+                  },
+                  (_, i) =>
+                    anioCalendario - 10 + i
+                ).map((anio) => (
+                  <option
+                    key={anio}
+                    value={anio}
+                  >
+                    {anio}
+                  </option>
+                ))}
+              </select>
+
+            </div>
+
+
+            <button
+              type="button"
+              onClick={() =>
+                cambiarMes(1)
+              }
+              className="rounded-lg border px-3 py-2 transition hover:bg-muted"
+              aria-label="Mes siguiente"
+            >
+              →
+            </button>
+
+          </div>
+
+
+          <div className="grid grid-cols-7 gap-1 text-center">
+
+            {[
+              "Lu",
+              "Ma",
+              "Mi",
+              "Ju",
+              "Vi",
+              "Sa",
+              "Do",
+            ].map((dia) => (
+              <div
+                key={dia}
+                className="py-2 text-xs font-medium text-muted-foreground"
+              >
+                {dia}
+              </div>
+            ))}
+
+
+            {calendario.map(
+              (dia, index) =>
+                dia ? (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() =>
+                      setDiaTemporal(dia)
+                    }
+                    className={`rounded-lg border p-3 transition ${
+                      dia === diaTemporal
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    {dia}
+                  </button>
+                ) : (
+                  <div
+                    key={index}
+                  />
+                )
+            )}
+
+          </div>
+
+
+          <div className="rounded-xl border bg-muted/30 p-4">
+
+            <p className="text-sm font-medium">
+              Fecha seleccionada
+            </p>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              {new Date(
+                anioCalendario,
+                mesCalendario,
+                diaTemporal
+              ).toLocaleDateString(
+                "es-MX",
+                {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="flex justify-end gap-3">
+
+            <button
+              type="button"
+              onClick={() =>
+                setMostrarFecha(false)
+              }
+              className="rounded-lg border px-4 py-2 transition hover:bg-muted"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={confirmarFecha}
+              className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground transition hover:opacity-90"
+            >
+              Confirmar fecha
+            </button>
+
+          </div>
+
+        </div>
+
+      </Modal>
+
+
+      <div className="grid grid-cols-2 gap-3">
+
+        <select
+          value={fechaSeleccionada.getHours()}
+          onChange={(e) =>
+            cambiarHora(
+              Number(e.target.value),
+              String(
+                fechaSeleccionada.getMinutes()
+              ).padStart(2, "0")
+            )
+          }
+          className="rounded-xl border bg-background px-3 py-2"
+        >
+          {horas.map((hora) => (
+            <option
+              key={hora}
+              value={hora}
+            >
+              {String(hora).padStart(2, "0")} hrs
+            </option>
+          ))}
+        </select>
+
+
+        <select
+          value={String(
+            fechaSeleccionada.getMinutes()
+          ).padStart(2, "0")}
+          onChange={(e) =>
+            cambiarHora(
+              fechaSeleccionada.getHours(),
+              e.target.value
+            )
+          }
+          className="rounded-xl border bg-background px-3 py-2"
+        >
+          {minutos.map((minuto) => (
+            <option
+              key={minuto}
+              value={minuto}
+            >
+              :{minuto}
+            </option>
+          ))}
+        </select>
+
+      </div>
+
+    </div>
+  );
+}
+
 export default function CitasPage() {
   const [citas, setCitas] = useState<Cita[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [vista, setVista] = useState<Vista>("SEMANA");
+  const [vista, setVista] = useState<Vista>("MES");
   const [fechaActual, setFechaActual] = useState(new Date());
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [citaSeleccionada, setCitaSeleccionada] =
+    useState<Cita | null>(null);
+
+  const [editandoCita, setEditandoCita] = useState(false);
+  const [fechaEditarCita, setFechaEditarCita] = useState("");
+  const [duracionEditarCita, setDuracionEditarCita] = useState("120");
+  const [motivoEditarCita, setMotivoEditarCita] = useState("");
+  const [notasEditarCita, setNotasEditarCita] = useState("");
+  const [guardandoEdicionCita, setGuardandoEdicionCita] =
+    useState(false);
+
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
@@ -242,9 +710,78 @@ export default function CitasPage() {
   function abrirCita(cita: Cita) {
     const fecha = new Date(cita.fecha);
 
+    setCitaSeleccionada(cita);
     setFechaActual(fecha);
-    setVista("DIA");
     setError("");
+  }
+
+  function iniciarEdicionCita(cita: Cita) {
+    setEditandoCita(true);
+    setFechaEditarCita(
+      fechaHoraParaInput(new Date(cita.fecha))
+    );
+    setDuracionEditarCita(String(cita.duracion));
+    setMotivoEditarCita(cita.motivo ?? "");
+    setNotasEditarCita(cita.notas ?? "");
+  }
+
+  async function guardarEdicionCita() {
+    if (!citaSeleccionada) {
+      return;
+    }
+
+    try {
+      setGuardandoEdicionCita(true);
+      setError("");
+
+      const respuesta = await fetch("/api/citas", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: citaSeleccionada.id,
+          fecha: fechaLocalAISO(fechaEditarCita),
+          duracion: Number(duracionEditarCita),
+          motivo: motivoEditarCita,
+          notas: notasEditarCita,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.error || "No se pudo actualizar la cita."
+        );
+      }
+
+      const citaActualizada = {
+        ...citaSeleccionada,
+        ...datos,
+      };
+
+      setCitas((actuales) =>
+        actuales.map((cita) =>
+          cita.id === datos.id
+            ? citaActualizada
+            : cita
+        )
+      );
+
+      setCitaSeleccionada(citaActualizada);
+      setEditandoCita(false);
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al guardar la cita."
+      );
+    } finally {
+      setGuardandoEdicionCita(false);
+    }
   }
 
   function moverPeriodo(direccion: number) {
@@ -548,13 +1085,7 @@ export default function CitasPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => abrirNuevaCita()}
-            className="rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground"
-          >
-            Nueva cita
-          </button>
+
         </header>
 
         {error && (
@@ -564,7 +1095,8 @@ export default function CitasPage() {
         )}
 
         {mostrarFormulario && (
-          <section className="rounded-xl border bg-background p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border bg-background p-6 shadow-xl">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold">
@@ -627,14 +1159,9 @@ export default function CitasPage() {
                     Fecha y hora *
                   </label>
 
-                  <input
-                    type="datetime-local"
-                    value={fechaHora}
-                    onChange={(e) =>
-                      setFechaHora(e.target.value)
-                    }
-                    className="w-full rounded-lg border bg-background px-3 py-2"
-                    required
+                  <SelectorFechaHora
+                    valor={fechaHora}
+                    onChange={setFechaHora}
                   />
                 </div>
 
@@ -733,9 +1260,18 @@ export default function CitasPage() {
               </div>
             </form>
           </section>
+          </div>
         )}
 
         <section className="rounded-xl border bg-background p-4 md:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => abrirNuevaCita()}
+              className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground"
+            >
+              + Nueva cita
+            </button>
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1075,6 +1611,7 @@ export default function CitasPage() {
             </div>
           )}
 
+        </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-4">
@@ -1099,6 +1636,214 @@ export default function CitasPage() {
             </div>
           ))}
         </section>
+
+        {citaSeleccionada && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <section className="w-full max-w-lg rounded-xl border bg-background p-6 shadow-xl">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-bold">
+                  {editandoCita
+                    ? "Editar cita"
+                    : "Detalle de cita"}
+                </h2>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCitaSeleccionada(null);
+                    setEditandoCita(false);
+                  }}
+                  className="rounded-lg border px-3 py-1 text-sm"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              {!editandoCita ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Cliente
+                    </p>
+                    <p className="font-semibold">
+                      {citaSeleccionada.cliente.nombre}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Teléfono
+                    </p>
+                    <p className="font-medium">
+                      {citaSeleccionada.cliente.telefono}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Fecha
+                    </p>
+                    <p className="font-medium">
+                      {new Date(
+                        citaSeleccionada.fecha
+                      ).toLocaleString("es-MX")}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Duración
+                    </p>
+                    <p className="font-medium">
+                      {citaSeleccionada.duracion} minutos
+                    </p>
+                  </div>
+
+                  {citaSeleccionada.motivo && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Motivo
+                      </p>
+                      <p className="font-medium">
+                        {citaSeleccionada.motivo}
+                      </p>
+                    </div>
+                  )}
+
+                  {citaSeleccionada.notas && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Notas
+                      </p>
+                      <p className="whitespace-pre-wrap font-medium">
+                        {citaSeleccionada.notas}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      iniciarEdicionCita(citaSeleccionada)
+                    }
+                    className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground"
+                  >
+                    Editar cita
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Fecha y hora
+                    </label>
+
+                    <SelectorFechaHora
+                      valor={fechaEditarCita}
+                      onChange={setFechaEditarCita}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Duración (minutos)
+                    </label>
+
+                    <input
+                      type="number"
+                      value={duracionEditarCita}
+                      onChange={(e) =>
+                        setDuracionEditarCita(e.target.value)
+                      }
+                      className="w-full rounded-lg border px-3 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Motivo
+                    </label>
+
+                    <input
+                      type="text"
+                      value={motivoEditarCita}
+                      onChange={(e) =>
+                        setMotivoEditarCita(e.target.value)
+                      }
+                      className="w-full rounded-lg border px-3 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Notas
+                    </label>
+
+                    <textarea
+                      value={notasEditarCita}
+                      onChange={(e) =>
+                        setNotasEditarCita(e.target.value)
+                      }
+                      rows={4}
+                      className="w-full rounded-lg border px-3 py-2"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditandoCita(false)
+                      }
+                      className="flex-1 rounded-lg border px-4 py-2"
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={guardandoEdicionCita}
+                      onClick={guardarEdicionCita}
+                      className="flex-1 rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                    >
+                      {guardandoEdicionCita
+                        ? "Guardando..."
+                        : "Guardar"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {estados.map((estado) => (
+                  <button
+                    key={estado.value}
+                    type="button"
+                    onClick={() => {
+                      cambiarEstado(
+                        citaSeleccionada,
+                        estado.value
+                      );
+
+                      setCitaSeleccionada({
+                        ...citaSeleccionada,
+                        estado: estado.value,
+                      });
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      citaSeleccionada.estado === estado.value
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    {estado.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
       </div>
     </main>
   );

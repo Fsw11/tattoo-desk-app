@@ -1,0 +1,383 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type Pago = {
+  id: number;
+  monto: string | number;
+  fecha: string;
+  metodo: string;
+  concepto: string | null;
+
+  cliente: {
+    id: number;
+    nombre: string;
+    telefono: string;
+  };
+};
+
+type Gasto = {
+  id: number;
+  concepto: string;
+  descripcion: string | null;
+  monto: string | number;
+  fecha: string;
+  categoria: string;
+};
+
+function formatoMoneda(valor: string | number) {
+  return Number(valor).toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  });
+}
+
+function formatoFecha(fecha: string) {
+  return new Date(fecha).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function nombreMetodo(metodo: string) {
+  const metodos: Record<string, string> = {
+    EFECTIVO: "Efectivo",
+    TARJETA: "Tarjeta",
+    TRANSFERENCIA: "Transferencia",
+    OTRO: "Otro",
+  };
+
+  return metodos[metodo] || metodo;
+}
+
+function nombreCategoria(categoria: string) {
+  const categorias: Record<string, string> = {
+    MATERIAL: "Material",
+    EQUIPO: "Equipo",
+    RENTA: "Renta",
+    SERVICIOS: "Servicios",
+    MARKETING: "Marketing",
+    OTRO: "Otro",
+  };
+
+  return categorias[categoria] || categoria;
+}
+
+export default function FinanzasPage() {
+  const [pagos, setPagos] = useState<Pago[]>([]);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+
+  async function cargarFinanzas() {
+    try {
+      setCargando(true);
+      setError("");
+
+      const [resPagos, resGastos] = await Promise.all([
+        fetch("/api/pagos"),
+        fetch("/api/gastos"),
+      ]);
+
+      const datosPagos = await resPagos.json();
+      const datosGastos = await resGastos.json();
+
+      if (!resPagos.ok || !resGastos.ok) {
+        throw new Error(
+          "No se pudo cargar la información financiera."
+        );
+      }
+
+      setPagos(datosPagos);
+      setGastos(datosGastos);
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al cargar las finanzas."
+      );
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    cargarFinanzas();
+  }, []);
+
+  const totalIngresos = pagos.reduce(
+    (total, pago) => total + Number(pago.monto),
+    0
+  );
+
+  const totalGastos = gastos.reduce(
+    (total, gasto) => total + Number(gasto.monto),
+    0
+  );
+
+  const balance = totalIngresos - totalGastos;
+
+  const pagosRecientes = pagos.slice(0, 5);
+  const gastosRecientes = gastos.slice(0, 5);
+
+  return (
+    <main className="min-h-screen bg-muted/40 p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Resumen financiero
+            </p>
+
+            <h1 className="text-3xl font-bold">
+              Finanzas
+            </h1>
+
+            <p className="mt-1 text-muted-foreground">
+              Control general de ingresos, gastos y balance del estudio.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={cargarFinanzas}
+            disabled={cargando}
+            className="rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
+          >
+            {cargando ? "Actualizando..." : "Actualizar"}
+          </button>
+        </header>
+
+
+        {error && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+
+        {cargando ? (
+          <section className="rounded-xl border bg-background p-8 text-center text-muted-foreground">
+            Cargando información financiera...
+          </section>
+        ) : (
+          <>
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Total ingresos
+                </p>
+
+                <p className="mt-2 text-3xl font-bold">
+                  {formatoMoneda(totalIngresos)}
+                </p>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {pagos.length} pago(s) registrado(s)
+                </p>
+              </div>
+
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Total gastos
+                </p>
+
+                <p className="mt-2 text-3xl font-bold">
+                  {formatoMoneda(totalGastos)}
+                </p>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {gastos.length} gasto(s) registrado(s)
+                </p>
+              </div>
+
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Balance actual
+                </p>
+
+                <p
+                  className={`mt-2 text-3xl font-bold ${
+                    balance >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {formatoMoneda(balance)}
+                </p>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Ingresos menos gastos
+                </p>
+              </div>
+
+            </section>
+
+
+            <section className="grid gap-6 lg:grid-cols-2">
+
+              <div className="rounded-xl border bg-background">
+                <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Últimos ingresos
+                    </h2>
+
+                    <p className="text-sm text-muted-foreground">
+                      Pagos registrados recientemente
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/pagos"
+                    className="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Ver todos
+                  </Link>
+                </div>
+
+
+                {pagosRecientes.length === 0 ? (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    No hay pagos registrados.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {pagosRecientes.map((pago) => (
+                      <div
+                        key={pago.id}
+                        className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {pago.concepto ||
+                              pago.cliente?.nombre ||
+                              "Pago registrado"}
+                          </p>
+
+                          <p className="text-sm text-muted-foreground">
+                            {pago.cliente?.nombre} ·{" "}
+                            {nombreMetodo(pago.metodo)}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground">
+                            {formatoFecha(pago.fecha)}
+                          </p>
+                        </div>
+
+                        <p className="font-semibold text-green-600">
+                          + {formatoMoneda(pago.monto)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              </div>
+
+
+              <div className="rounded-xl border bg-background">
+                <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Últimos gastos
+                    </h2>
+
+                    <p className="text-sm text-muted-foreground">
+                      Gastos registrados recientemente
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/gastos"
+                    className="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Ver todos
+                  </Link>
+                </div>
+
+
+                {gastosRecientes.length === 0 ? (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    No hay gastos registrados.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {gastosRecientes.map((gasto) => (
+                      <div
+                        key={gasto.id}
+                        className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {gasto.concepto}
+                          </p>
+
+                          <p className="text-sm text-muted-foreground">
+                            {nombreCategoria(gasto.categoria)}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground">
+                            {formatoFecha(gasto.fecha)}
+                          </p>
+                        </div>
+
+                        <p className="font-semibold text-red-600">
+                          - {formatoMoneda(gasto.monto)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              </div>
+
+            </section>
+
+
+            <section className="rounded-xl border bg-background p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Resumen del estudio
+                  </h2>
+
+                  <p className="text-sm text-muted-foreground">
+                    Vista general de la actividad financiera registrada.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/pagos"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  >
+                    Administrar ingresos
+                  </Link>
+
+                  <Link
+                    href="/gastos"
+                    className="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Administrar gastos
+                  </Link>
+                </div>
+              </div>
+            </section>
+
+          </>
+        )}
+
+      </div>
+    </main>
+  );
+}

@@ -1,0 +1,1135 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type Pago = {
+  id: number;
+  monto: string | number;
+  fecha: string;
+  metodo: string;
+  concepto: string | null;
+
+  cliente: {
+    id: number;
+    nombre: string;
+    telefono: string;
+  } | null;
+};
+
+
+type MaterialTatuaje = {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  unidad: string | null;
+  costoUnitario: number;
+  costoTotal: number;
+  fecha: string;
+};
+
+type RentabilidadTatuaje = {
+  id: number;
+  nombre: string;
+  estilo: string | null;
+  zona: string | null;
+  estado: string;
+  precio: number;
+  creadoEn: string;
+
+  cliente: {
+    id: number;
+    nombre: string;
+  };
+
+  ingresos: number;
+  costoMateriales: number;
+  utilidad: number;
+  margen: number;
+
+  pagos: number;
+  movimientosMaterial: number;
+
+  materiales: MaterialTatuaje[];
+};
+
+type ResumenRentabilidad = {
+  tatuajes: number;
+  ingresos: number;
+  costoMateriales: number;
+  utilidad: number;
+};
+
+type DatosRentabilidad = {
+  resumen: ResumenRentabilidad;
+  tatuajes: RentabilidadTatuaje[];
+};
+
+type Gasto = {
+  id: number;
+  concepto: string;
+  descripcion: string | null;
+  monto: string | number;
+  fecha: string;
+  categoria: string;
+};
+
+type ResumenFinanciero = {
+  periodo: {
+    tipo: string;
+    inicio: string | null;
+    fin: string | null;
+  };
+
+  ingresos: {
+    total: number;
+    registros: number;
+  };
+
+  gastosOperativos: {
+    total: number;
+    registros: number;
+  };
+
+  materiales: {
+    total: number;
+    utilizadosEnTatuajes: number;
+    usoGeneral: number;
+    movimientos: number;
+  };
+
+  resultado: {
+    utilidadBruta: number;
+    gastosTotales: number;
+    utilidadNeta: number;
+    margenUtilidad: number;
+  };
+};
+
+type Periodo =
+  | "hoy"
+  | "semana"
+  | "mes"
+  | "anio"
+  | "todo"
+  | "personalizado";
+
+function formatoMoneda(valor: string | number) {
+  return Number(valor).toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  });
+}
+
+function formatoFecha(fecha: string) {
+  return new Date(fecha).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function nombreMetodo(metodo: string) {
+  const metodos: Record<string, string> = {
+    EFECTIVO: "Efectivo",
+    TARJETA: "Tarjeta",
+    TRANSFERENCIA: "Transferencia",
+    OTRO: "Otro",
+  };
+
+  return metodos[metodo] || metodo;
+}
+
+function nombreCategoria(categoria: string) {
+  const categorias: Record<string, string> = {
+    MATERIAL: "Material",
+    EQUIPO: "Equipo",
+    RENTA: "Renta",
+    SERVICIOS: "Servicios",
+    MARKETING: "Marketing",
+    OTRO: "Otro",
+  };
+
+  return categorias[categoria] || categoria;
+}
+
+function fechaInputHoy() {
+  const fecha = new Date();
+  const zonaLocal =
+    new Date(
+      fecha.getTime() -
+      fecha.getTimezoneOffset() * 60000
+    );
+
+  return zonaLocal
+    .toISOString()
+    .split("T")[0];
+}
+
+export default function FinanzasPage() {
+  const [pagos, setPagos] = useState<Pago[]>([]);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+
+  const [rentabilidad, setRentabilidad] =
+    useState<DatosRentabilidad | null>(null);
+
+
+  const [resumen, setResumen] =
+    useState<ResumenFinanciero | null>(null);
+
+  const [periodo, setPeriodo] =
+    useState<Periodo>("mes");
+
+  const [inicioPersonalizado, setInicioPersonalizado] =
+    useState("");
+
+  const [finPersonalizado, setFinPersonalizado] =
+    useState(fechaInputHoy());
+
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+
+  async function cargarFinanzas(
+    periodoSeleccionado: Periodo = periodo
+  ) {
+    try {
+      setCargando(true);
+      setError("");
+
+      let urlResumen =
+        `/api/finanzas/resumen?periodo=${periodoSeleccionado}`;
+
+      let urlRentabilidad =
+        `/api/finanzas/rentabilidad-tatuajes?periodo=${periodoSeleccionado}`;
+
+      if (
+        periodoSeleccionado === "personalizado" &&
+        inicioPersonalizado &&
+        finPersonalizado
+      ) {
+        urlResumen =
+          `/api/finanzas/resumen?periodo=personalizado&inicio=${inicioPersonalizado}&fin=${finPersonalizado}`;
+
+        urlRentabilidad =
+          `/api/finanzas/rentabilidad-tatuajes?periodo=personalizado&inicio=${inicioPersonalizado}&fin=${finPersonalizado}`;
+      }
+
+      const [
+        resPagos,
+        resGastos,
+        resResumen,
+        resRentabilidad,
+      ] = await Promise.all([
+        fetch("/api/pagos"),
+        fetch("/api/gastos"),
+        fetch(urlResumen),
+        fetch(urlRentabilidad),
+      ]);
+
+      const datosPagos =
+        await resPagos.json();
+
+      const datosGastos =
+        await resGastos.json();
+
+      const datosResumen =
+        await resResumen.json();
+
+      const datosRentabilidad =
+        await resRentabilidad.json();
+
+      if (
+        !resPagos.ok ||
+        !resGastos.ok ||
+        !resResumen.ok ||
+        !resRentabilidad.ok
+      ) {
+        throw new Error(
+          datosResumen.error ||
+          "No se pudo cargar la información financiera."
+        );
+      }
+
+      setPagos(datosPagos);
+      setGastos(datosGastos);
+      setResumen(datosResumen);
+      setRentabilidad(datosRentabilidad);
+
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al cargar las finanzas."
+      );
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    cargarFinanzas();
+  }, []);
+
+  function cambiarPeriodo(
+    nuevoPeriodo: Periodo
+  ) {
+    setPeriodo(nuevoPeriodo);
+
+    if (nuevoPeriodo !== "personalizado") {
+      cargarFinanzas(nuevoPeriodo);
+    }
+  }
+
+  function aplicarPeriodoPersonalizado() {
+    if (!inicioPersonalizado || !finPersonalizado) {
+      setError(
+        "Selecciona una fecha de inicio y una fecha final."
+      );
+      return;
+    }
+
+    if (
+      new Date(inicioPersonalizado) >
+      new Date(finPersonalizado)
+    ) {
+      setError(
+        "La fecha inicial no puede ser mayor que la fecha final."
+      );
+      return;
+    }
+
+    setPeriodo("personalizado");
+    cargarFinanzas("personalizado");
+  }
+
+  const pagosRecientes =
+    pagos.slice(0, 5);
+
+  const gastosRecientes =
+    gastos.slice(0, 5);
+
+  const botonesPeriodo: {
+    valor: Periodo;
+    etiqueta: string;
+  }[] = [
+    {
+      valor: "hoy",
+      etiqueta: "Hoy",
+    },
+    {
+      valor: "semana",
+      etiqueta: "Semana",
+    },
+    {
+      valor: "mes",
+      etiqueta: "Mes",
+    },
+    {
+      valor: "anio",
+      etiqueta: "Año",
+    },
+    {
+      valor: "todo",
+      etiqueta: "Todo",
+    },
+  ];
+
+  return (
+    <main className="min-h-screen bg-muted/40 p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Control financiero
+            </p>
+
+            <h1 className="text-3xl font-bold">
+              Finanzas
+            </h1>
+
+            <p className="mt-1 text-muted-foreground">
+              Analiza ingresos, gastos operativos y consumo
+              de materiales del estudio.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => cargarFinanzas()}
+            disabled={cargando}
+            className="rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
+          >
+            {cargando
+              ? "Actualizando..."
+              : "Actualizar"}
+          </button>
+        </header>
+
+
+        {/* ========================================
+            FILTROS DE PERIODO
+        ======================================== */}
+
+        <section className="rounded-xl border bg-background p-4">
+          <div className="flex flex-col gap-4">
+
+            <div>
+              <h2 className="font-semibold">
+                Periodo de análisis
+              </h2>
+
+              <p className="text-sm text-muted-foreground">
+                Selecciona el periodo que deseas analizar.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {botonesPeriodo.map((boton) => (
+                <button
+                  key={boton.valor}
+                  type="button"
+                  onClick={() =>
+                    cambiarPeriodo(boton.valor)
+                  }
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                    periodo === boton.valor
+                      ? "bg-primary text-primary-foreground"
+                      : "border hover:bg-muted"
+                  }`}
+                >
+                  {boton.etiqueta}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPeriodo("personalizado")
+                }
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  periodo === "personalizado"
+                    ? "bg-primary text-primary-foreground"
+                    : "border hover:bg-muted"
+                }`}
+              >
+                Personalizado
+              </button>
+            </div>
+
+
+            {periodo === "personalizado" && (
+              <div className="flex flex-col gap-3 border-t pt-4 md:flex-row md:items-end">
+
+                <div className="flex flex-1 flex-col gap-1">
+                  <label className="text-sm font-medium">
+                    Desde
+                  </label>
+
+                  <input
+                    type="date"
+                    value={inicioPersonalizado}
+                    onChange={(e) =>
+                      setInicioPersonalizado(
+                        e.target.value
+                      )
+                    }
+                    className="rounded-lg border bg-background px-3 py-2"
+                  />
+                </div>
+
+
+                <div className="flex flex-1 flex-col gap-1">
+                  <label className="text-sm font-medium">
+                    Hasta
+                  </label>
+
+                  <input
+                    type="date"
+                    value={finPersonalizado}
+                    onChange={(e) =>
+                      setFinPersonalizado(
+                        e.target.value
+                      )
+                    }
+                    className="rounded-lg border bg-background px-3 py-2"
+                  />
+                </div>
+
+
+                <button
+                  type="button"
+                  onClick={
+                    aplicarPeriodoPersonalizado
+                  }
+                  className="rounded-lg bg-primary px-5 py-2 font-medium text-primary-foreground"
+                >
+                  Aplicar
+                </button>
+
+              </div>
+            )}
+
+          </div>
+        </section>
+
+
+        {error && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+
+        {cargando || !resumen ? (
+          <section className="rounded-xl border bg-background p-8 text-center text-muted-foreground">
+            Cargando información financiera...
+          </section>
+        ) : (
+          <>
+
+            {/* ========================================
+                INDICADORES PRINCIPALES
+            ======================================== */}
+
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Ingresos
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-green-600">
+                  {formatoMoneda(
+                    resumen.ingresos.total
+                  )}
+                </p>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {resumen.ingresos.registros} pago(s)
+                  en el periodo
+                </p>
+              </div>
+
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Gastos operativos
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-red-600">
+                  {formatoMoneda(
+                    resumen.gastosOperativos.total
+                  )}
+                </p>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {resumen.gastosOperativos.registros} gasto(s)
+                  registrados
+                </p>
+              </div>
+
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Material consumido
+                </p>
+
+                <p className="mt-2 text-2xl font-bold">
+                  {formatoMoneda(
+                    resumen.materiales.total
+                  )}
+                </p>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {resumen.materiales.movimientos} salida(s)
+                  de inventario
+                </p>
+              </div>
+
+
+              <div className="rounded-xl border bg-background p-5">
+                <p className="text-sm text-muted-foreground">
+                  Utilidad neta
+                </p>
+
+                <p
+                  className={`mt-2 text-2xl font-bold ${
+                    resumen.resultado.utilidadNeta >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {formatoMoneda(
+                    resumen.resultado.utilidadNeta
+                  )}
+                </p>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Después de todos los gastos
+                </p>
+              </div>
+
+            </section>
+
+
+            {/* ========================================
+                RESULTADO Y COSTOS
+            ======================================== */}
+
+            <section className="grid gap-6 lg:grid-cols-2">
+
+              <div className="rounded-xl border bg-background p-5">
+                <h2 className="text-lg font-semibold">
+                  Resultado financiero
+                </h2>
+
+                <p className="text-sm text-muted-foreground">
+                  Rentabilidad del estudio durante el periodo.
+                </p>
+
+                <div className="mt-5 space-y-4">
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="text-sm">
+                      Utilidad bruta
+                    </span>
+
+                    <span className="font-semibold">
+                      {formatoMoneda(
+                        resumen.resultado.utilidadBruta
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="text-sm">
+                      Gastos totales
+                    </span>
+
+                    <span className="font-semibold text-red-600">
+                      - {formatoMoneda(
+                        resumen.resultado.gastosTotales
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="font-medium">
+                      Utilidad neta
+                    </span>
+
+                    <span
+                      className={`text-xl font-bold ${
+                        resumen.resultado.utilidadNeta >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {formatoMoneda(
+                        resumen.resultado.utilidadNeta
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      Margen de utilidad
+                    </span>
+
+                    <span className="text-xl font-bold">
+                      {resumen.resultado.margenUtilidad.toFixed(1)}%
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+
+
+              <div className="rounded-xl border bg-background p-5">
+                <h2 className="text-lg font-semibold">
+                  Análisis de materiales
+                </h2>
+
+                <p className="text-sm text-muted-foreground">
+                  Distribución del consumo de inventario.
+                </p>
+
+                <div className="mt-5 space-y-4">
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="text-sm">
+                      Material usado en tatuajes
+                    </span>
+
+                    <span className="font-semibold">
+                      {formatoMoneda(
+                        resumen.materiales.utilizadosEnTatuajes
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="text-sm">
+                      Material de uso general
+                    </span>
+
+                    <span className="font-semibold">
+                      {formatoMoneda(
+                        resumen.materiales.usoGeneral
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-sm text-muted-foreground">
+                      Consumo total de materiales
+                    </p>
+
+                    <p className="mt-1 text-2xl font-bold">
+                      {formatoMoneda(
+                        resumen.materiales.total
+                      )}
+                    </p>
+                  </div>
+
+                </div>
+              </div>
+
+            </section>
+
+
+            {/* ========================================
+                RENTABILIDAD POR TATUAJE
+            ======================================== */}
+
+            <section className="rounded-xl border bg-background">
+              <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Rentabilidad por tatuaje
+                  </h2>
+
+                  <p className="text-sm text-muted-foreground">
+                    Analiza cuáles tatuajes generan mayor utilidad considerando
+                    los ingresos reales y el costo de materiales consumidos.
+                  </p>
+                </div>
+
+                {rentabilidad && (
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    <div className="rounded-lg bg-muted px-3 py-2">
+                      <span className="text-muted-foreground">
+                        Tatuajes:
+                      </span>{" "}
+                      <span className="font-semibold">
+                        {rentabilidad.resumen.tatuajes}
+                      </span>
+                    </div>
+
+                    <div className="rounded-lg bg-muted px-3 py-2">
+                      <span className="text-muted-foreground">
+                        Utilidad total:
+                      </span>{" "}
+                      <span className="font-semibold text-green-600">
+                        {formatoMoneda(
+                          rentabilidad.resumen.utilidad
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!rentabilidad ? (
+                <div className="p-6 text-sm text-muted-foreground">
+                  Cargando análisis de rentabilidad...
+                </div>
+              ) : rentabilidad.tatuajes.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  No hay tatuajes con información financiera disponible
+                  para este periodo.
+                </div>
+              ) : (
+                <>
+                  {/* RESUMEN */}
+                  <div className="grid gap-4 border-b p-5 md:grid-cols-3">
+
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        Ingresos generados
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-green-600">
+                        {formatoMoneda(
+                          rentabilidad.resumen.ingresos
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        Material consumido
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-red-600">
+                        {formatoMoneda(
+                          rentabilidad.resumen.costoMateriales
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        Margen promedio
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold">
+                        {(
+                        rentabilidad.resumen.ingresos > 0
+                          ? (rentabilidad.resumen.utilidad /
+                              rentabilidad.resumen.ingresos) *
+                            100
+                          : 0
+                      ).toFixed(1)}%
+                      </p>
+                    </div>
+
+                  </div>
+
+
+                  {/* TABLA */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[850px]">
+                      <thead className="border-b bg-muted/40">
+                        <tr className="text-left text-sm text-muted-foreground">
+                          <th className="p-4 font-medium">
+                            #
+                          </th>
+
+                          <th className="p-4 font-medium">
+                            Tatuaje
+                          </th>
+
+                          <th className="p-4 font-medium">
+                            Cliente
+                          </th>
+
+                          <th className="p-4 text-right font-medium">
+                            Ingresos
+                          </th>
+
+                          <th className="p-4 text-right font-medium">
+                            Material
+                          </th>
+
+                          <th className="p-4 text-right font-medium">
+                            Utilidad
+                          </th>
+
+                          <th className="p-4 text-right font-medium">
+                            Margen
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {rentabilidad.tatuajes.map(
+                          (tatuaje, index) => (
+                            <tr
+                              key={tatuaje.id}
+                              className="border-b transition hover:bg-muted/30"
+                            >
+                              <td className="p-4">
+                                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+                                  {index + 1}
+                                </span>
+                              </td>
+
+                              <td className="p-4">
+                                <p className="font-medium">
+                                  {tatuaje.nombre}
+                                </p>
+
+                                {tatuaje.materiales.length > 0 && (
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {tatuaje.materiales.length} material(es)
+                                    registrado(s)
+                                  </p>
+                                )}
+                              </td>
+
+                              <td className="p-4 text-sm text-muted-foreground">
+                                {tatuaje.cliente?.nombre ||
+                                  "Sin cliente"}
+                              </td>
+
+                              <td className="p-4 text-right font-medium text-green-600">
+                                {formatoMoneda(tatuaje.ingresos)}
+                              </td>
+
+                              <td className="p-4 text-right font-medium text-red-600">
+                                {formatoMoneda(tatuaje.costoMateriales)}
+                              </td>
+
+                              <td
+                                className={`p-4 text-right font-bold ${
+                                  tatuaje.utilidad >= 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {formatoMoneda(tatuaje.utilidad)}
+                              </td>
+
+                              <td className="p-4 text-right">
+                                <span
+                                  className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                                    tatuaje.margen >= 50
+                                      ? "bg-green-500/10 text-green-600"
+                                      : tatuaje.margen >= 20
+                                      ? "bg-yellow-500/10 text-yellow-600"
+                                      : "bg-red-500/10 text-red-600"
+                                  }`}
+                                >
+                                  {tatuaje.margen.toFixed(1)}%
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+
+                  {/* DETALLE DE MATERIALES */}
+                  <div className="border-t p-5">
+                    <h3 className="font-semibold">
+                      Detalle de consumo
+                    </h3>
+
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Materiales registrados directamente en cada tatuaje.
+                    </p>
+
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {rentabilidad.tatuajes
+                        .filter(
+                          (tatuaje) =>
+                            tatuaje.materiales.length > 0
+                        )
+                        .slice(0, 6)
+                        .map((tatuaje) => (
+                          <div
+                            key={`material-${tatuaje.id}`}
+                            className="rounded-lg border p-4"
+                          >
+                            <p className="font-medium">
+                              {tatuaje.nombre}
+                            </p>
+
+                            <div className="mt-3 space-y-2">
+                              {tatuaje.materiales.map(
+                                (material, materialIndex) => (
+                                  <div
+                                    key={`${material.nombre}-${materialIndex}`}
+                                    className="flex items-center justify-between text-sm"
+                                  >
+                                    <span className="text-muted-foreground">
+                                      {material.nombre}
+                                    </span>
+
+                                    <span className="font-medium">
+                                      {formatoMoneda(
+                                        material.costoTotal
+                                      )}
+                                    </span>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+
+
+            {/* ========================================
+                ACTIVIDAD RECIENTE
+            ======================================== */}
+
+            <section className="grid gap-6 lg:grid-cols-2">
+
+              <div className="rounded-xl border bg-background">
+                <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Últimos ingresos
+                    </h2>
+
+                    <p className="text-sm text-muted-foreground">
+                      Pagos registrados recientemente.
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/pagos"
+                    className="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Ver todos
+                  </Link>
+                </div>
+
+                {pagosRecientes.length === 0 ? (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    No hay pagos registrados.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {pagosRecientes.map((pago) => (
+                      <div
+                        key={pago.id}
+                        className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {pago.concepto ||
+                              pago.cliente?.nombre ||
+                              "Pago registrado"}
+                          </p>
+
+                          <p className="text-sm text-muted-foreground">
+                            {pago.cliente?.nombre ||
+                              "Sin cliente"} ·{" "}
+                            {nombreMetodo(pago.metodo)}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground">
+                            {formatoFecha(pago.fecha)}
+                          </p>
+                        </div>
+
+                        <p className="font-semibold text-green-600">
+                          + {formatoMoneda(pago.monto)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+
+              <div className="rounded-xl border bg-background">
+                <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Últimos gastos
+                    </h2>
+
+                    <p className="text-sm text-muted-foreground">
+                      Gastos registrados recientemente.
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/gastos"
+                    className="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Ver todos
+                  </Link>
+                </div>
+
+                {gastosRecientes.length === 0 ? (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    No hay gastos registrados.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {gastosRecientes.map((gasto) => (
+                      <div
+                        key={gasto.id}
+                        className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {gasto.concepto}
+                          </p>
+
+                          <p className="text-sm text-muted-foreground">
+                            {nombreCategoria(gasto.categoria)}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground">
+                            {formatoFecha(gasto.fecha)}
+                          </p>
+                        </div>
+
+                        <p className="font-semibold text-red-600">
+                          - {formatoMoneda(gasto.monto)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </section>
+
+
+            {/* ========================================
+                ACCIONES
+            ======================================== */}
+
+            <section className="rounded-xl border bg-background p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Administración financiera
+                  </h2>
+
+                  <p className="text-sm text-muted-foreground">
+                    Registra y consulta los movimientos económicos
+                    del estudio.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/pagos"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  >
+                    Administrar ingresos
+                  </Link>
+
+                  <Link
+                    href="/gastos"
+                    className="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Administrar gastos
+                  </Link>
+
+                  <Link
+                    href="/inventario"
+                    className="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Ver inventario
+                  </Link>
+                </div>
+
+              </div>
+            </section>
+
+          </>
+        )}
+
+      </div>
+    </main>
+  );
+}

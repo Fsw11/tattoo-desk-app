@@ -3,7 +3,11 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/components/layout/Sidebar";
+import Header from "@/components/layout/Header";
+import ThemeProvider from "@/components/providers/ThemeProvider";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
 
 const geistSans = Geist({
@@ -25,11 +29,21 @@ export const metadata: Metadata = {
 };
 
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  const session = await auth();
+
+  const configuracion = session?.user?.estudioId
+    ? await prisma.configuracionEstudio.findUnique({
+        where: {
+          estudioId: session.user.estudioId,
+        },
+      })
+    : null;
 
   return (
     <html
@@ -39,17 +53,30 @@ export default function RootLayout({
 
       <body className="min-h-full">
 
-        <div className="flex min-h-screen">
+        <ThemeProvider configuracion={configuracion}>
 
-          <Sidebar />
+          <div className="flex min-h-screen">
 
-          <main className="flex-1">
+            <Sidebar
+              configuracion={configuracion}
+              usuario={session?.user ?? null}
+            />
 
-            {children}
+            <div className="flex flex-1 flex-col">
 
-          </main>
+              <Header configuracion={configuracion} />
 
-        </div>
+              <main className="flex-1">
+
+                {children}
+
+              </main>
+
+            </div>
+
+          </div>
+
+        </ThemeProvider>
 
       </body>
 

@@ -1,0 +1,279 @@
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+
+// ========================================
+// RENTABILIDAD POR TATUAJE
+// ========================================
+
+export async function GET() {
+  try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          error: "No autorizado",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const estudioId = session.user.estudioId;
+
+
+    // ========================================
+    // OBTENER TATUAJES CON PAGOS Y MATERIALES
+    // ========================================
+
+    const tatuajes =
+      await prisma.tatuaje.findMany({
+        where: {
+          estudioId,
+        },
+
+        orderBy: {
+          creadoEn: "desc",
+        },
+
+        select: {
+          id: true,
+          nombre: true,
+          estilo: true,
+          zona: true,
+          precio: true,
+          estado: true,
+          creadoEn: true,
+
+          cliente: {
+            select: {
+              id: true,
+              nombre: true,
+            },
+          },
+
+          pagos: {
+            select: {
+              id: true,
+              monto: true,
+              fecha: true,
+            },
+          },
+
+          movimientosInventario: {
+            where: {
+              tipo: "SALIDA",
+            },
+
+            select: {
+              id: true,
+              cantidad: true,
+              costoUnitario: true,
+              costoTotal: true,
+              fecha: true,
+
+              inventario: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  unidad: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+
+    // ========================================
+    // CALCULAR RENTABILIDAD
+    // ========================================
+
+    const resultado =
+      tatuajes.map((tatuaje) => {
+
+        const ingresos =
+          tatuaje.pagos.reduce(
+            (total, pago) =>
+              total + Number(pago.monto),
+            0
+          );
+
+
+        const costoMateriales =
+          tatuaje.movimientosInventario.reduce(
+            (total, movimiento) =>
+              total +
+              Number(
+                movimiento.costoTotal ?? 0
+              ),
+            0
+          );
+
+
+        const utilidad =
+          ingresos - costoMateriales;
+
+
+        const margen =
+          ingresos > 0
+            ? (utilidad / ingresos) * 100
+            : 0;
+
+
+        return {
+
+          id: tatuaje.id,
+
+          nombre: tatuaje.nombre,
+
+          estilo: tatuaje.estilo,
+
+          zona: tatuaje.zona,
+
+          estado: tatuaje.estado,
+
+          precio: Number(
+            tatuaje.precio ?? 0
+          ),
+
+          creadoEn: tatuaje.creadoEn,
+
+          cliente: tatuaje.cliente,
+
+
+          // ================================
+          // FINANZAS
+          // ================================
+
+          ingresos,
+
+          costoMateriales,
+
+          utilidad,
+
+          margen,
+
+
+          // ================================
+          // DETALLE
+          // ================================
+
+          pagos: tatuaje.pagos.length,
+
+          movimientosMaterial:
+            tatuaje.movimientosInventario.length,
+
+          materiales:
+            tatuaje.movimientosInventario.map(
+              (movimiento) => ({
+
+                id: movimiento.id,
+
+                nombre:
+                  movimiento.inventario.nombre,
+
+                cantidad:
+                  Number(
+                    movimiento.cantidad
+                  ),
+
+                unidad:
+                  movimiento.inventario.unidad,
+
+                costoUnitario:
+                  Number(
+                    movimiento.costoUnitario ?? 0
+                  ),
+
+                costoTotal:
+                  Number(
+                    movimiento.costoTotal ?? 0
+                  ),
+
+                fecha:
+                  movimiento.fecha,
+
+              })
+            ),
+
+        };
+
+      });
+
+
+    // ========================================
+    // ORDENAR POR MAYOR UTILIDAD
+    // ========================================
+
+    resultado.sort(
+      (a, b) =>
+        b.utilidad - a.utilidad
+    );
+
+
+    // ========================================
+    // RESUMEN GENERAL
+    // ========================================
+
+    const resumen = {
+
+      tatuajes:
+        resultado.length,
+
+
+      ingresos:
+        resultado.reduce(
+          (total, tatuaje) =>
+            total + tatuaje.ingresos,
+          0
+        ),
+
+
+      costoMateriales:
+        resultado.reduce(
+          (total, tatuaje) =>
+            total +
+            tatuaje.costoMateriales,
+          0
+        ),
+
+
+      utilidad:
+        resultado.reduce(
+          (total, tatuaje) =>
+            total + tatuaje.utilidad,
+          0
+        ),
+
+    };
+
+
+    return NextResponse.json({
+      resumen,
+      tatuajes: resultado,
+    });
+
+
+  } catch (error) {
+
+    console.error(
+      "Error calculando rentabilidad por tatuaje:",
+      error
+    );
+
+
+    return NextResponse.json(
+      {
+        error:
+          "No se pudo calcular la rentabilidad por tatuaje.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
