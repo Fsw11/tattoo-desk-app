@@ -194,50 +194,64 @@ export async function POST(
           nombre:
             String(body.nombre ?? "").trim(),
 
-
           descripcion:
             body.descripcion || null,
-
 
           estilo:
             body.estilo || null,
 
-
           zona:
             body.zona || null,
-
 
           precio:
             body.precio
               ? Number(body.precio)
               : null,
 
-
           anticipo:
             body.anticipo
               ? Number(body.anticipo)
               : null,
 
-
           estado:
             body.estado || "PENDIENTE",
-
 
           notas:
             body.notas || null,
 
-
           clienteId:
             clienteId,
-
 
           estudioId:
             session.user.estudioId,
 
-
           usuarioId:
             Number(session.user.id),
 
+        },
+
+        select: {
+          id: true,
+          nombre: true,
+          descripcion: true,
+          estilo: true,
+          zona: true,
+          precio: true,
+          anticipo: true,
+          estado: true,
+          notas: true,
+          creadoEn: true,
+          actualizadoEn: true,
+
+          cliente: {
+            select: {
+              id: true,
+              nombre: true,
+            },
+          },
+
+          pagos: true,
+          fotos: true,
         },
 
       });

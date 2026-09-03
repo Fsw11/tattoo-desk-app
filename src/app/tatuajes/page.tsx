@@ -307,7 +307,7 @@ export default function TatuajesPage() {
 
                 <p>
                   Cliente:{" "}
-                  {tatuaje.cliente.nombre}
+                  {tatuaje.cliente?.nombre || "Sin cliente"}
                 </p>
 
                 {tatuaje.estilo && (

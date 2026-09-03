@@ -552,7 +552,7 @@ function SelectorFechaHora({
       </Modal>
 
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
 
         <select
           value={fechaSeleccionada.getHours()}
@@ -1041,7 +1041,7 @@ export default function CitasPage() {
           cita.estado
         )}`}
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="font-semibold">
             {compacto
               ? formatoHoraCorta(fecha)
@@ -1067,8 +1067,8 @@ export default function CitasPage() {
   }
 
   return (
-    <main className="min-h-screen bg-muted/40 p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <main className="min-h-screen bg-muted/40 p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-4 md:space-y-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">
@@ -1096,7 +1096,7 @@ export default function CitasPage() {
 
         {mostrarFormulario && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border bg-background p-6 shadow-xl">
+            <section className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border bg-background p-4 md:p-6 shadow-xl">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold">
@@ -1114,7 +1114,7 @@ export default function CitasPage() {
                   setMostrarFormulario(false);
                   limpiarFormulario();
                 }}
-                className="rounded-lg border px-4 py-2"
+                className="w-full rounded-lg border px-4 py-2 sm:w-auto"
               >
                 Cerrar
               </button>
@@ -1124,7 +1124,7 @@ export default function CitasPage() {
               onSubmit={crearCita}
               className="space-y-5"
             >
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium">
                     Cliente *
@@ -1264,7 +1264,7 @@ export default function CitasPage() {
         )}
 
         <section className="rounded-xl border bg-background p-4 md:p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={() => abrirNuevaCita()}
@@ -1286,7 +1286,7 @@ export default function CitasPage() {
               <button
                 type="button"
                 onClick={irHoy}
-                className="rounded-lg border px-4 py-2"
+                className="w-full rounded-lg border px-4 py-2 sm:w-auto"
               >
                 Hoy
               </button>
@@ -1347,7 +1347,7 @@ export default function CitasPage() {
                     key={cita.id}
                     className="rounded-xl border p-4"
                   >
-                    <div className="grid gap-4 md:grid-cols-[120px_1fr_auto] md:items-start">
+                    <div className="grid gap-4 sm:grid-cols-[110px_1fr] md:grid-cols-[120px_1fr_auto] md:items-start">
                       <div className="rounded-lg border p-4 text-center">
                         <p className="text-xl font-bold">
                           {formatoHora(
@@ -1430,7 +1430,7 @@ export default function CitasPage() {
               )}
             </div>
           ) : vista === "SEMANA" ? (
-            <div className="grid gap-3 md:grid-cols-7">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-7">
               {Array.from({ length: 7 }).map(
                 (_, indice) => {
                   const dia =
@@ -1509,13 +1509,13 @@ export default function CitasPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[900px] overflow-hidden rounded-xl border">
+            <div className="-mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+              <div className="min-w-[720px] overflow-hidden rounded-xl border md:min-w-[900px]">
                 <div className="grid grid-cols-7 border-l border-t">
                   {diasSemana.map((dia) => (
                     <div
                       key={dia}
-                      className="border-b border-r bg-muted/50 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      className="border-b border-r bg-muted/50 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:px-3 sm:py-3 sm:text-xs"
                     >
                       {dia}
                     </div>
@@ -1542,7 +1542,7 @@ export default function CitasPage() {
                     return (
                       <div
                         key={dia.toISOString()}
-                        className={`group min-h-[150px] border-b border-r p-2 transition ${
+                        className={`group min-h-[120px] border-b border-r p-1.5 transition sm:min-h-[150px] sm:p-2 ${
                           !esMesActual
                             ? "bg-muted/10 text-muted-foreground"
                             : "bg-background"
@@ -1552,11 +1552,11 @@ export default function CitasPage() {
                             : ""
                         }`}
                       >
-                        <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="mb-1.5 flex items-center justify-between gap-1 sm:mb-2 sm:gap-2">
                           <button
                             type="button"
                             onClick={() => abrirNuevaCita(dia)}
-                            className={`flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-sm font-semibold transition ${
+                            className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold transition sm:h-7 sm:min-w-7 sm:px-2 sm:text-sm ${
                               esHoy
                                 ? "bg-primary text-primary-foreground"
                                 : "hover:bg-muted"
@@ -1568,7 +1568,7 @@ export default function CitasPage() {
 
                           <div className="flex items-center gap-1">
                             {citasDia.length > 0 && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">
+                              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px]">
                                 {citasDia.length}{" "}
                                 {citasDia.length === 1
                                   ? "cita"
@@ -1579,7 +1579,7 @@ export default function CitasPage() {
                             <button
                               type="button"
                               onClick={() => abrirNuevaCita(dia)}
-                              className="rounded-md border px-2 py-1 text-xs font-medium opacity-70 transition hover:bg-muted hover:opacity-100"
+                              className="rounded-md border px-1.5 py-1 text-[10px] font-medium opacity-70 transition hover:bg-muted hover:opacity-100 sm:px-2 sm:text-xs"
                               aria-label={`Agregar cita el ${dia.getDate()}`}
                               title="Agregar cita"
                             >
@@ -1592,7 +1592,7 @@ export default function CitasPage() {
                           <button
                             type="button"
                             onClick={() => abrirNuevaCita(dia)}
-                            className="flex min-h-[90px] w-full items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground transition hover:bg-muted/50"
+                            className="flex min-h-[70px] w-full items-center justify-center rounded-lg border border-dashed px-1 text-[10px] text-muted-foreground transition hover:bg-muted/50 sm:min-h-[90px] sm:text-xs"
                           >
                             Día libre
                           </button>
@@ -1614,7 +1614,7 @@ export default function CitasPage() {
         </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {estados.map((estado) => (
             <div
               key={estado.value}
@@ -1639,7 +1639,7 @@ export default function CitasPage() {
 
         {citaSeleccionada && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <section className="w-full max-w-lg rounded-xl border bg-background p-6 shadow-xl">
+            <section className="w-full max-w-lg rounded-xl border bg-background p-4 md:p-6 shadow-xl">
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="text-xl font-bold">
                   {editandoCita
