@@ -3,92 +3,118 @@
 import {
   ReactNode,
   useEffect,
+  useState,
 } from "react";
 
 import {
   EVENTO_TEMA_CAMBIADO,
 } from "./theme-events";
 
-type Configuracion = {
-  tema: string;
-  colorPrincipal: string;
+type ConfiguracionTema = {
+  tema?: string | null;
+  colorPrincipal?: string | null;
+};
+
+type ThemeProviderProps = {
+  children: ReactNode;
+  configuracion?: ConfiguracionTema | null;
 };
 
 export default function ThemeProvider({
   children,
   configuracion,
-}: {
-  children: ReactNode;
-  configuracion: Configuracion | null;
-}) {
+}: ThemeProviderProps) {
+
+  const [tema, setTema] = useState(
+    configuracion?.tema || "dark"
+  );
+
+  const [colorPrincipal, setColorPrincipal] =
+    useState(
+      configuracion?.colorPrincipal ||
+      "#D4AF37"
+    );
+
+
+  function aplicarConfiguracion(
+    nuevoTema: string,
+    nuevoColor: string
+  ) {
+
+    const root =
+      document.documentElement;
+
+    if (nuevoTema === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+
+    root.style.setProperty(
+      "--color-principal",
+      nuevoColor
+    );
+
+  }
+
 
   useEffect(() => {
 
-    function aplicarTema(
-      datos: {
-        tema?: string;
-        colorPrincipal?: string;
-      }
+    aplicarConfiguracion(
+      tema,
+      colorPrincipal
+    );
+
+  }, [
+    tema,
+    colorPrincipal,
+  ]);
+
+
+  useEffect(() => {
+
+    function manejarCambio(
+      event: Event
     ) {
 
-      const root =
-        document.documentElement;
-
-      if (datos.tema === "dark") {
-        root.classList.add("dark");
-      } else {
-        root.classList.remove("dark");
-      }
-
-      if (datos.colorPrincipal) {
-        root.style.setProperty(
-          "--primary",
-          datos.colorPrincipal
-        );
-      }
-    }
-
-
-    aplicarTema(configuracion ?? {});
-
-
-    function manejarCambioTema(
-      evento: Event
-    ) {
-
-      const eventoPersonalizado =
-        evento as CustomEvent<{
+      const customEvent =
+        event as CustomEvent<{
           tema?: string;
           colorPrincipal?: string;
         }>;
 
-      aplicarTema(
-        eventoPersonalizado.detail ?? {}
-      );
-    }
+      const nuevoTema =
+        customEvent.detail?.tema ||
+        tema;
 
+      const nuevoColor =
+        customEvent.detail?.colorPrincipal ||
+        colorPrincipal;
+
+      setTema(nuevoTema);
+      setColorPrincipal(nuevoColor);
+
+    }
 
     window.addEventListener(
       EVENTO_TEMA_CAMBIADO,
-      manejarCambioTema
+      manejarCambio
     );
-
 
     return () => {
 
       window.removeEventListener(
         EVENTO_TEMA_CAMBIADO,
-        manejarCambioTema
+        manejarCambio
       );
 
     };
 
-  }, [configuracion]);
+  }, [
+    tema,
+    colorPrincipal,
+  ]);
 
 
-  return (
-    <>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

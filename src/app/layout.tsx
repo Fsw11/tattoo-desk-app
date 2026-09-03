@@ -3,8 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
+import AppShell from "@/components/layout/AppShell";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -55,26 +54,12 @@ export default async function RootLayout({
 
         <ThemeProvider configuracion={configuracion}>
 
-          <div className="flex min-h-screen">
-
-            <Sidebar
-              configuracion={configuracion}
-              usuario={session?.user ?? null}
-            />
-
-            <div className="flex flex-1 flex-col">
-
-              <Header configuracion={configuracion} />
-
-              <main className="flex-1">
-
-                {children}
-
-              </main>
-
-            </div>
-
-          </div>
+          <AppShell
+            configuracion={configuracion}
+            usuario={session?.user ?? null}
+          >
+            {children}
+          </AppShell>
 
         </ThemeProvider>
 
