@@ -64,13 +64,35 @@ export default function ConfiguracionPage() {
     valor: string
   ) {
 
-    setConfiguracion({
+    const nuevaConfiguracion = {
       ...configuracion,
       [campo]: valor,
-    });
+    };
+
+    setConfiguracion(nuevaConfiguracion);
+
+    if (
+      campo === "tema" ||
+      campo === "colorPrincipal"
+    ) {
+      notificarCambioTema({
+        tema: nuevaConfiguracion.tema,
+        colorPrincipal:
+          nuevaConfiguracion.colorPrincipal,
+      });
+    }
 
   }
 
+
+  function vistaPrevia() {
+
+    notificarCambioTema({
+      tema: configuracion.tema,
+      colorPrincipal: configuracion.colorPrincipal,
+    });
+
+  }
 
 
 
@@ -384,9 +406,10 @@ export default function ConfiguracionPage() {
 
               <button
                 type="button"
+                onClick={vistaPrevia}
                 className="mt-3 rounded-lg bg-primary px-4 py-2 text-primary-foreground"
               >
-                Botón del estudio
+                Aplicar vista previa
               </button>
 
             </div>

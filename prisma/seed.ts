@@ -1,12 +1,11 @@
-import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import bcrypt from "bcryptjs";
 
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL no está configurada");
+  throw new Error("DATABASE_URL no está definida");
 }
 
 const adapter = new PrismaPg({
@@ -18,57 +17,92 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const password = await bcrypt.hash("TattooDesk123!", 12);
 
-  const estudio = await prisma.estudio.upsert({
+  console.log("Creando estudio...");
+
+  let estudio = await prisma.estudio.findFirst({
     where: {
-      id: 1,
-    },
-    update: {},
-    create: {
-      nombre: "Mi Estudio de Tatuajes",
+      nombre: "Tattoo Desk",
     },
   });
 
-  const usuario = await prisma.usuario.upsert({
-    where: {
-      email: "admin@tattoodesk.local",
-    },
-    update: {},
-    create: {
-      nombre: "Administrador",
-      email: "admin@tattoodesk.local",
-      password,
-      rol: "ADMIN",
-      estudioId: estudio.id,
-    },
-  });
-
-  const clienteExistente = await prisma.cliente.findFirst({
-    where: {
-      estudioId: estudio.id,
-      telefono: "6860000000",
-    },
-  });
-
-  if (!clienteExistente) {
-    const cliente = await prisma.cliente.create({
+  if (!estudio) {
+    estudio = await prisma.estudio.create({
       data: {
-        nombre: "Cliente de Prueba",
-        telefono: "6860000000",
-        email: "cliente@prueba.local",
+        nombre: "Tattoo Desk",
+      },
+    });
+
+    console.log("Estudio creado:", estudio.id);
+  } else {
+    console.log("El estudio ya existe:", estudio.id);
+  }
+
+
+  console.log("Creando usuario administrador...");
+
+  const passwordHash = await bcrypt.hash(
+    "Admin12345",
+    10
+  );
+
+  const usuarioExistente =
+    await prisma.usuario.findUnique({
+      where: {
+        email: "admin@tattoodesk.com",
+      },
+    });
+
+
+  if (!usuarioExistente) {
+
+    const usuario =
+      await prisma.usuario.create({
+        data: {
+          nombre: "Administrador",
+          email: "admin@tattoodesk.com",
+          password: passwordHash,
+          rol: "ADMIN",
+          activo: true,
+          estudioId: estudio.id,
+        },
+      });
+
+    console.log("Usuario creado:");
+    console.log("ID:", usuario.id);
+
+  } else {
+
+    console.log(
+      "El usuario ya existe. Actualizando estudio y contraseña..."
+    );
+
+    await prisma.usuario.update({
+      where: {
+        email: "admin@tattoodesk.com",
+      },
+      data: {
+        password: passwordHash,
+        activo: true,
+        rol: "ADMIN",
         estudioId: estudio.id,
       },
     });
 
-    console.log("Cliente creado:", cliente.nombre);
-  } else {
-    console.log("El cliente de prueba ya existe.");
   }
 
-  console.log("Administrador:", usuario.email);
+
+  console.log("");
+  console.log("==============================");
+  console.log("USUARIO ADMINISTRADOR LISTO");
+  console.log("==============================");
+  console.log("Email: admin@tattoodesk.com");
+  console.log("Password: Admin12345");
   console.log("Estudio ID:", estudio.id);
+  console.log("==============================");
+
 }
+
 
 main()
   .catch((error) => {
