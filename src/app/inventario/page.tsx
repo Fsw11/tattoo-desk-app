@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   FormEvent,
   useEffect,
@@ -202,11 +204,25 @@ export default function InventarioPage() {
       Number(item.minimo)
     );
   }
+  const totalMateriales = items.length;
+
+  const materialesStockBajo = items.filter(
+    (item) => stockBajo(item)
+  ).length;
+
+  const valorInventario = items.reduce(
+    (total, item) =>
+      total +
+      Number(item.cantidad ?? 0) *
+      Number(item.costo ?? 0),
+    0
+  );
+
   return (
-  <main className="min-h-screen bg-muted/40 p-6">
+  <main className="min-h-screen bg-muted/40 p-4 md:p-6">
     <div className="mx-auto max-w-7xl space-y-6">
 
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
             Administración
@@ -215,21 +231,86 @@ export default function InventarioPage() {
           <h1 className="text-3xl font-bold">
             Inventario
           </h1>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            Controla materiales, existencias y movimientos del estudio.
+          </p>
         </div>
 
-        {!mostrarFormulario && (
-          <button
-            type="button"
-            onClick={() => {
-              setError("");
-              setMostrarFormulario(true);
-            }}
-            className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground"
+        <div className="flex flex-wrap gap-3">
+
+          <Link
+            href="/inventario/movimientos"
+            className="rounded-lg border bg-background px-4 py-2 font-medium transition hover:bg-muted"
           >
-            Nuevo material
-          </button>
-        )}
+            Movimientos
+          </Link>
+
+          {!mostrarFormulario && (
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                setMostrarFormulario(true);
+              }}
+              className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground"
+            >
+              Nuevo material
+            </button>
+          )}
+
+        </div>
       </header>
+
+
+      {/* RESUMEN DEL INVENTARIO */}
+      <section className="grid gap-4 md:grid-cols-3">
+
+        <div className="rounded-xl border bg-background p-5">
+          <p className="text-sm text-muted-foreground">
+            Total de materiales
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            {totalMateriales}
+          </p>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            Materiales registrados
+          </p>
+        </div>
+
+
+        <div className="rounded-xl border bg-background p-5">
+          <p className="text-sm text-muted-foreground">
+            Stock bajo
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            {materialesStockBajo}
+          </p>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            Requieren atención
+          </p>
+        </div>
+
+
+        <div className="rounded-xl border bg-background p-5">
+          <p className="text-sm text-muted-foreground">
+            Valor estimado
+          </p>
+
+          <p className="mt-2 text-3xl font-bold">
+            {formatoMoneda(valorInventario)}
+          </p>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            Valor actual del inventario
+          </p>
+        </div>
+
+      </section>
 
 
       {mostrarFormulario && (
@@ -364,130 +445,156 @@ export default function InventarioPage() {
 
 
       <section className="rounded-xl border bg-background">
-
         {cargando ? (
-
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             Cargando inventario...
           </div>
 
         ) : items.length === 0 ? (
 
-          <div className="p-6 text-muted-foreground">
+          <div className="p-4 text-muted-foreground md:p-6">
             No hay materiales registrados.
           </div>
 
         ) : (
 
-          <div className="overflow-x-auto">
-
-            <table className="w-full">
-
-              <thead>
-                <tr className="border-b text-left text-sm">
-
-                  <th className="px-5 py-3">
-                    Material
-                  </th>
-
-                  <th className="px-5 py-3">
-                    Categoría
-                  </th>
-
-                  <th className="px-5 py-3">
-                    Cantidad
-                  </th>
-
-                  <th className="px-5 py-3">
-                    Costo
-                  </th>
-
-                  <th className="px-5 py-3">
-                    Estado
-                  </th>
-
-                </tr>
-              </thead>
-
-
-              <tbody>
-
-                {items.map((item) => (
-
-                  <tr
-                    key={item.id}
-                    className="border-b"
-                  >
-
-                    <td className="px-5 py-4">
-
-                      <p className="font-semibold">
+          <>
+            {/* VISTA MOVIL */}
+            <div className="space-y-3 p-3 md:hidden">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border bg-card p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold">
                         {item.nombre}
-                      </p>
+                      </h3>
 
-                      {item.descripcion && (
-                        <p className="text-sm text-muted-foreground">
-                          {item.descripcion}
+                      {item.categoria && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {item.categoria}
                         </p>
                       )}
+                    </div>
 
-                    </td>
+                    {stockBajo(item) ? (
+                      <span className="shrink-0 rounded-full border px-2.5 py-1 text-xs">
+                        Stock bajo
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        Disponible
+                      </span>
+                    )}
+                  </div>
 
+                  {item.descripcion && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {item.descripcion}
+                    </p>
+                  )}
 
-                    <td className="px-5 py-4">
-                      {item.categoria || "—"}
-                    </td>
+                  <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Cantidad
+                      </p>
+                      <p className="mt-1 font-semibold">
+                        {Number(item.cantidad)} {item.unidad || ""}
+                      </p>
+                    </div>
 
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Costo
+                      </p>
+                      <p className="mt-1 font-semibold">
+                        {formatoMoneda(item.costo)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                    <td className="px-5 py-4">
+            {/* VISTA ESCRITORIO */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-left text-sm">
+                    <th className="px-5 py-3">
+                      Material
+                    </th>
 
-                      {Number(
-                        item.cantidad
-                      )}{" "}
+                    <th className="px-5 py-3">
+                      Categoría
+                    </th>
 
-                      {item.unidad || ""}
+                    <th className="px-5 py-3">
+                      Cantidad
+                    </th>
 
-                    </td>
+                    <th className="px-5 py-3">
+                      Costo
+                    </th>
 
-
-                    <td className="px-5 py-4">
-                      {formatoMoneda(
-                        item.costo
-                      )}
-                    </td>
-
-
-                    <td className="px-5 py-4">
-
-                      {stockBajo(item) ? (
-
-                        <span className="rounded-full border px-3 py-1 text-sm">
-                          Stock bajo
-                        </span>
-
-                      ) : (
-
-                        <span className="text-sm">
-                          Disponible
-                        </span>
-
-                      )}
-
-                    </td>
-
-
+                    <th className="px-5 py-3">
+                      Estado
+                    </th>
                   </tr>
+                </thead>
 
-                ))}
+                <tbody>
+                  {items.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b transition-colors hover:bg-muted/50"
+                    >
+                      <td className="px-5 py-4">
+                        <p className="font-semibold">
+                          {item.nombre}
+                        </p>
 
-              </tbody>
+                        {item.descripcion && (
+                          <p className="text-sm text-muted-foreground">
+                            {item.descripcion}
+                          </p>
+                        )}
+                      </td>
 
-            </table>
+                      <td className="px-5 py-4">
+                        {item.categoria || "—"}
+                      </td>
 
-          </div>
+                      <td className="px-5 py-4">
+                        {Number(item.cantidad)}{" "}
+                        {item.unidad || ""}
+                      </td>
 
+                      <td className="px-5 py-4">
+                        {formatoMoneda(item.costo)}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {stockBajo(item) ? (
+                          <span className="rounded-full border px-3 py-1 text-sm">
+                            Stock bajo
+                          </span>
+                        ) : (
+                          <span className="text-sm">
+                            Disponible
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
-
       </section>
 
     </div>
