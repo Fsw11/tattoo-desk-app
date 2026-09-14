@@ -1,24 +1,18 @@
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET() {
-  const session = await auth();
+import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
 
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
-    );
-  }
+export async function GET() {
+  const authResult = await requireSession(["ADMIN"]);
+  if (!authResult.ok) return authResult.response;
 
   const gastos = await prisma.gasto.findMany({
     where: {
-      estudioId: session.user.estudioId,
+      estudioId: authResult.user.estudioId,
+      eliminadoEn: null,
     },
-    orderBy: {
-      fecha: "desc",
-    },
+    orderBy: { fecha: "desc" },
     select: {
       id: true,
       concepto: true,
@@ -27,13 +21,7 @@ export async function GET() {
       fecha: true,
       categoria: true,
       notas: true,
-
-      usuario: {
-        select: {
-          id: true,
-          nombre: true,
-        },
-      },
+      usuario: { select: { id: true, nombre: true } },
     },
   });
 
@@ -41,24 +29,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
-    );
-  }
+  const authResult = await requireSession(["ADMIN"]);
+  if (!authResult.ok) return authResult.response;
 
   try {
     const body = await request.json();
-
-    const concepto = String(
-      body.concepto ?? ""
-    ).trim();
-
+    const concepto = String(body.concepto ?? "").trim();
     const monto = Number(body.monto);
-
     const categoriasPermitidas = [
       "MATERIAL",
       "EQUIPO",
@@ -70,70 +47,35 @@ export async function POST(request: Request) {
 
     if (!concepto) {
       return NextResponse.json(
-        {
-          error:
-            "El concepto es obligatorio.",
-        },
-        {
-          status: 400,
-        }
+        { error: "El concepto es obligatorio." },
+        { status: 400 },
       );
     }
 
     if (!Number.isFinite(monto) || monto <= 0) {
       return NextResponse.json(
-        {
-          error:
-            "El monto debe ser mayor a cero.",
-        },
-        {
-          status: 400,
-        }
+        { error: "El monto debe ser mayor a cero." },
+        { status: 400 },
       );
     }
 
-    if (
-      !categoriasPermitidas.includes(
-        body.categoria
-      )
-    ) {
+    if (!categoriasPermitidas.includes(body.categoria)) {
       return NextResponse.json(
-        {
-          error:
-            "La categoría no es válida.",
-        },
-        {
-          status: 400,
-        }
+        { error: "La categoría no es válida." },
+        { status: 400 },
       );
     }
 
     const gasto = await prisma.gasto.create({
       data: {
         concepto,
-
-        descripcion:
-          String(body.descripcion ?? "")
-            .trim() || null,
-
+        descripcion: String(body.descripcion ?? "").trim() || null,
         monto,
-
-        categoria:
-          body.categoria,
-
-        notas:
-          String(body.notas ?? "")
-            .trim() || null,
-
-        estudioId:
-          session.user.estudioId,
-
-        usuarioId:
-          session.user.id
-            ? Number(session.user.id)
-            : null,
+        categoria: body.categoria,
+        notas: String(body.notas ?? "").trim() || null,
+        estudioId: authResult.user.estudioId,
+        usuarioId: Number(authResult.user.id),
       },
-
       select: {
         id: true,
         concepto: true,
@@ -142,30 +84,16 @@ export async function POST(request: Request) {
         fecha: true,
         categoria: true,
         notas: true,
-
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
+        usuario: { select: { id: true, nombre: true } },
       },
     });
 
-    return NextResponse.json(gasto, {
-      status: 201,
-    });
+    return NextResponse.json(gasto, { status: 201 });
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
-      {
-        error:
-          "No se pudo registrar el gasto.",
-      },
-      {
-        status: 500,
-      }
+      { error: "No se pudo registrar el gasto." },
+      { status: 500 },
     );
   }
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Pago = {
-  id: number;
+  id: string;
   monto: string | number;
   fecha: string;
   metodo: string;
@@ -19,7 +19,7 @@ type Pago = {
 
 
 type MaterialTatuaje = {
-  id: number;
+  id: string;
   nombre: string;
   cantidad: number;
   unidad: string | null;
@@ -29,7 +29,7 @@ type MaterialTatuaje = {
 };
 
 type RentabilidadTatuaje = {
-  id: number;
+  id: string;
   nombre: string;
   estilo: string | null;
   zona: string | null;
@@ -351,21 +351,33 @@ export default function FinanzasPage() {
             </h1>
 
             <p className="mt-1 text-muted-foreground">
-              Analiza ingresos, gastos operativos y consumo
-              de materiales del estudio.
+              Reportes de ingresos, gastos y rentabilidad. El registro diario de
+              materiales y cobros está en{" "}
+              <Link href="/pos" className="text-primary underline">
+                Punto de venta
+              </Link>
+              .
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => cargarFinanzas()}
-            disabled={cargando}
-            className="rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
-          >
-            {cargando
-              ? "Actualizando..."
-              : "Actualizar"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/pos"
+              className="rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted"
+            >
+              Ir a punto de venta
+            </Link>
+            <button
+              type="button"
+              onClick={() => cargarFinanzas()}
+              disabled={cargando}
+              className="rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
+            >
+              {cargando
+                ? "Actualizando..."
+                : "Actualizar"}
+            </button>
+          </div>
         </header>
 
 

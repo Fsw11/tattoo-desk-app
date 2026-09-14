@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tattoo Desk
 
-## Getting Started
+SaaS de gestión para estudios de tatuajes: clientes, agenda, tatuajes, galería, inventario, finanzas, consentimiento digital y modo offline (PWA).
 
-First, run the development server:
+## Stack
+
+- Next.js 16 + React 19
+- Prisma 7 + PostgreSQL
+- Auth.js (credentials)
+- Tailwind CSS 4
+- Dexie (IndexedDB) + Service Worker
+
+## Arranque local
 
 ```bash
+cp .env.example .env   # completa DATABASE_URL y AUTH_SECRET
+npm install
+npx prisma db push
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Admin de desarrollo (seed):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Email: `admin@tattoodesk.com`
+- Password: `Admin12345`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O crea un estudio nuevo en `/registro`.
 
-## Learn More
+## Variables útiles
 
-To learn more about Next.js, take a look at the following resources:
+Ver [`.env.example`](.env.example):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `ALLOW_MANUAL_PLAN` / activación de plan en desarrollo
+- `MP_ACCESS_TOKEN` para checkout Mercado Pago
+- `STORAGE_DRIVER=s3` + credenciales para fotos en la nube
+- `RECOVERY_DEV_MODE` para recuperación de contraseña en local
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Capacitor (tiendas)
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ver [`docs/capacitor.md`](docs/capacitor.md) y `capacitor.config.json`.

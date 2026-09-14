@@ -3,7 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  CalendarDays,
+  Camera,
+  ClipboardList,
+  FilePenLine,
+  Home,
+  LogOut,
+  Menu,
+  Package,
+  Settings,
+  ShoppingCart,
+  Users,
+  Wallet,
+  X,
+} from "lucide-react";
+import type { FeaturesPlan } from "@/lib/planes";
 
 type Configuracion = {
   logoUrl: string | null;
@@ -17,46 +33,36 @@ type Usuario = {
 };
 
 const menu = [
+  { nombre: "Dashboard", ruta: "/dashboard", icono: Home },
+  { nombre: "Clientes", ruta: "/clientes", icono: Users },
+  { nombre: "Citas", ruta: "/citas", icono: CalendarDays },
+  { nombre: "Tatuajes", ruta: "/tatuajes", icono: ClipboardList },
+  { nombre: "Galería", ruta: "/fotos", icono: Camera },
   {
-    nombre: "Dashboard",
-    ruta: "/dashboard",
-    icono: "🏠",
+    nombre: "Consentimiento",
+    ruta: "/consentimiento",
+    icono: FilePenLine,
+    feature: "consentimiento" as const,
   },
   {
-    nombre: "Clientes",
-    ruta: "/clientes",
-    icono: "👤",
-  },
-  {
-    nombre: "Citas",
-    ruta: "/citas",
-    icono: "📅",
-  },
-  {
-    nombre: "Tatuajes",
-    ruta: "/tatuajes",
-    icono: "🎨",
-  },
-  {
-    nombre: "Galería",
-    ruta: "/fotos",
-    icono: "📷",
+    nombre: "Punto de venta",
+    ruta: "/pos",
+    icono: ShoppingCart,
+    feature: "pos" as const,
   },
   {
     nombre: "Inventario",
     ruta: "/inventario",
-    icono: "📦",
+    icono: Package,
+    feature: "inventario" as const,
   },
   {
     nombre: "Finanzas",
     ruta: "/finanzas",
-    icono: "💰",
+    icono: Wallet,
+    feature: "finanzasAvanzadas" as const,
   },
-  {
-    nombre: "Configuración",
-    ruta: "/configuracion",
-    icono: "⚙️",
-  },
+  { nombre: "Configuración", ruta: "/configuracion", icono: Settings },
 ];
 
 export default function Sidebar({
@@ -68,145 +74,128 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
+  const [features, setFeatures] = useState<FeaturesPlan | null>(null);
+  const nombre = configuracion?.nombreMostrar || "Tattoo Desk";
 
-  const nombre =
-    configuracion?.nombreMostrar ||
-    "Tattoo Desk";
+  useEffect(() => {
+    fetch("/api/plan/features")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.features) setFeatures(d.features);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const contenidoMenu = (
     <>
       <div className="mb-8 flex items-center gap-3">
-        {configuracion?.logoUrl && (
+        {configuracion?.logoUrl ? (
           <img
             src={configuracion.logoUrl}
             alt="Logo del estudio"
-            className="h-12 w-12 rounded-xl object-cover"
+            className="h-11 w-11 rounded-[var(--radius)] object-cover"
           />
+        ) : (
+          <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius)] bg-primary/15 text-sm font-bold text-primary">
+            TD
+          </div>
         )}
-
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold">
-            {nombre}
-          </h1>
-
-          <p className="text-sm text-muted-foreground">
-            Gestión de estudio
-          </p>
+          <h1 className="truncate text-lg font-bold">{nombre}</h1>
+          <p className="text-xs text-muted-foreground">Gestión de estudio</p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-2">
-        {menu.map((item) => {
-          const activo =
-            pathname === item.ruta ||
-            (item.ruta !== "/" &&
-              pathname.startsWith(item.ruta));
+      <nav className="flex-1 space-y-1">
+        {menu
+          .filter((item) => {
+            if (item.ruta === "/configuracion") {
+              return !usuario?.rol || usuario.rol === "ADMIN";
+            }
+            if (item.ruta === "/finanzas") {
+              return !usuario?.rol || usuario.rol === "ADMIN";
+            }
+            if (
+              "feature" in item &&
+              item.feature &&
+              features &&
+              !features[item.feature]
+            ) {
+              return false;
+            }
+            return true;
+          })
+          .map((item) => {
+            const Icon = item.icono;
+            const activo =
+              pathname === item.ruta ||
+              (item.ruta !== "/" && pathname.startsWith(item.ruta));
 
-          return (
-            <Link
-              key={item.ruta}
-              href={item.ruta}
-              onClick={() => setAbierto(false)}
-              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                activo
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <span className="text-base">
-                {item.icono}
-              </span>
-
-              <span>
+            return (
+              <Link
+                key={item.ruta}
+                href={item.ruta}
+                onClick={() => setAbierto(false)}
+                className={`flex min-h-11 items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium transition ${
+                  activo
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
                 {item.nombre}
-              </span>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })}
       </nav>
 
-      <div className="mt-6 border-t pt-4">
-        <div className="mb-3 rounded-xl bg-muted/50 p-3">
-          <p className="truncate text-sm font-semibold">
-            {usuario?.name || "Usuario"}
-          </p>
-
-          <p className="truncate text-xs text-muted-foreground">
-            {usuario?.email || ""}
-          </p>
-
-          {usuario?.rol && (
-            <span className="mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium">
-              {usuario.rol}
-            </span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            signOut({
-              callbackUrl: "/login",
-            })
-          }
-          className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-        >
-          <span>↪</span>
-
-          <span>
-            Cerrar sesión
-          </span>
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/login" })}
+        className="mt-4 flex min-h-11 w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      >
+        <LogOut className="h-5 w-5" />
+        Cerrar sesión
+      </button>
     </>
   );
 
   return (
     <>
-      {/* BOTÓN MÓVIL */}
       <button
         type="button"
+        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-[var(--radius)] border border-border bg-card lg:hidden"
         onClick={() => setAbierto(true)}
-        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-xl border bg-background text-xl shadow-md lg:hidden"
         aria-label="Abrir menú"
       >
-        ☰
+        <Menu className="h-5 w-5" />
       </button>
 
-      {/* SIDEBAR ESCRITORIO */}
-      <aside className="hidden min-h-screen w-64 flex-col border-r bg-background p-5 lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card p-4 lg:flex">
         {contenidoMenu}
       </aside>
 
-      {/* OVERLAY MÓVIL */}
       {abierto && (
-        <button
-          type="button"
-          aria-label="Cerrar menú"
-          onClick={() => setAbierto(false)}
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-        />
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            aria-label="Cerrar menú"
+            onClick={() => setAbierto(false)}
+          />
+          <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-card p-4 shadow-xl">
+            <button
+              type="button"
+              className="mb-4 ml-auto flex h-10 w-10 items-center justify-center rounded-[var(--radius)] border border-border"
+              onClick={() => setAbierto(false)}
+              aria-label="Cerrar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {contenidoMenu}
+          </aside>
+        </div>
       )}
-
-      {/* SIDEBAR MÓVIL */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-background p-5 shadow-2xl transition-transform duration-300 lg:hidden ${
-          abierto
-            ? "translate-x-0"
-            : "-translate-x-full"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg hover:bg-muted"
-          aria-label="Cerrar menú"
-        >
-          ✕
-        </button>
-
-        {contenidoMenu}
-      </aside>
     </>
   );
 }

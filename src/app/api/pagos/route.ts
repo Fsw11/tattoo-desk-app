@@ -1,55 +1,27 @@
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET() {
-  const session = await auth();
+import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
 
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
-    );
-  }
+export async function GET() {
+  const authResult = await requireSession();
+  if (!authResult.ok) return authResult.response;
 
   const pagos = await prisma.pago.findMany({
     where: {
-      estudioId: session.user.estudioId,
+      estudioId: authResult.user.estudioId,
+      eliminadoEn: null,
     },
-    orderBy: {
-      fecha: "desc",
-    },
+    orderBy: { fecha: "desc" },
     select: {
       id: true,
       monto: true,
-      fecha: true,
-      metodo: true,
       concepto: true,
       notas: true,
-
-      cliente: {
-        select: {
-          id: true,
-          nombre: true,
-          telefono: true,
-        },
-      },
-
-      tatuaje: {
-        select: {
-          id: true,
-          nombre: true,
-          precio: true,
-          anticipo: true,
-        },
-      },
-
-      usuario: {
-        select: {
-          id: true,
-          nombre: true,
-        },
-      },
+      metodo: true,
+      fecha: true,
+      cliente: { select: { id: true, nombre: true, telefono: true } },
+      tatuaje: { select: { id: true, nombre: true } },
     },
   });
 
@@ -57,175 +29,77 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
-    );
-  }
+  const authResult = await requireSession();
+  if (!authResult.ok) return authResult.response;
 
   try {
     const body = await request.json();
-
+    const id =
+      typeof body.id === "string" && body.id.length > 0
+        ? body.id
+        : crypto.randomUUID();
     const monto = Number(body.monto);
-    const clienteId = Number(body.clienteId);
-
-    const metodosPermitidos = [
-      "EFECTIVO",
-      "TARJETA",
-      "TRANSFERENCIA",
-      "OTRO",
-    ];
+    const metodo = String(body.metodo ?? "EFECTIVO");
 
     if (!Number.isFinite(monto) || monto <= 0) {
       return NextResponse.json(
-        { error: "El monto debe ser mayor a cero." },
-        { status: 400 }
+        { error: "Monto inválido." },
+        { status: 400 },
       );
     }
 
-    if (!Number.isInteger(clienteId)) {
+    const metodos = ["EFECTIVO", "TARJETA", "TRANSFERENCIA", "OTRO"];
+    if (!metodos.includes(metodo)) {
       return NextResponse.json(
-        { error: "El cliente no es válido." },
-        { status: 400 }
+        { error: "Método de pago inválido." },
+        { status: 400 },
       );
     }
 
-    if (!metodosPermitidos.includes(body.metodo)) {
-      return NextResponse.json(
-        { error: "El método de pago no es válido." },
-        { status: 400 }
-      );
-    }
+    const clienteId = body.clienteId ? String(body.clienteId) : null;
+    const tatuajeId = body.tatuajeId ? String(body.tatuajeId) : null;
 
-    const cliente = await prisma.cliente.findFirst({
-      where: {
-        id: clienteId,
-        estudioId: session.user.estudioId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!cliente) {
-      return NextResponse.json(
-        {
-          error:
-            "El cliente no pertenece a este estudio.",
+    if (clienteId) {
+      const cliente = await prisma.cliente.findFirst({
+        where: {
+          id: clienteId,
+          estudioId: authResult.user.estudioId,
+          eliminadoEn: null,
         },
-        { status: 404 }
-      );
-    }
-
-    let tatuajeId: number | null = null;
-
-    if (
-      body.tatuajeId !== undefined &&
-      body.tatuajeId !== null &&
-      body.tatuajeId !== ""
-    ) {
-      tatuajeId = Number(body.tatuajeId);
-
-      if (!Number.isInteger(tatuajeId)) {
+      });
+      if (!cliente) {
         return NextResponse.json(
-          { error: "El tatuaje no es válido." },
-          { status: 400 }
-        );
-      }
-
-      const tatuaje =
-        await prisma.tatuaje.findFirst({
-          where: {
-            id: tatuajeId,
-            clienteId: cliente.id,
-            estudioId: session.user.estudioId,
-          },
-          select: {
-            id: true,
-          },
-        });
-
-      if (!tatuaje) {
-        return NextResponse.json(
-          {
-            error:
-              "El tatuaje no pertenece al cliente.",
-          },
-          { status: 404 }
+          { error: "Cliente no encontrado." },
+          { status: 404 },
         );
       }
     }
 
     const pago = await prisma.pago.create({
       data: {
+        id,
         monto,
-        metodo: body.metodo,
-
-        concepto:
-          String(body.concepto ?? "").trim() || null,
-
-        notas:
-          String(body.notas ?? "").trim() || null,
-
-        estudioId: session.user.estudioId,
-        clienteId: cliente.id,
+        metodo: metodo as "EFECTIVO" | "TARJETA" | "TRANSFERENCIA" | "OTRO",
+        concepto: body.concepto ? String(body.concepto).trim() : null,
+        notas: body.notas ? String(body.notas).trim() : null,
+        fecha: body.fecha ? new Date(body.fecha) : new Date(),
+        estudioId: authResult.user.estudioId,
+        clienteId,
         tatuajeId,
-
-        usuarioId: session.user.id
-          ? Number(session.user.id)
-          : null,
+        usuarioId: Number(authResult.user.id),
       },
-
-      select: {
-        id: true,
-        monto: true,
-        fecha: true,
-        metodo: true,
-        concepto: true,
-        notas: true,
-
-        cliente: {
-          select: {
-            id: true,
-            nombre: true,
-            telefono: true,
-          },
-        },
-
-        tatuaje: {
-          select: {
-            id: true,
-            nombre: true,
-            precio: true,
-            anticipo: true,
-          },
-        },
-
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
+      include: {
+        cliente: { select: { id: true, nombre: true, telefono: true } },
+        tatuaje: { select: { id: true, nombre: true } },
       },
     });
 
-    return NextResponse.json(pago, {
-      status: 201,
-    });
+    return NextResponse.json(pago, { status: 201 });
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
-      {
-        error: "No se pudo registrar el pago.",
-      },
-      {
-        status: 500,
-      }
+      { error: "No se pudo registrar el pago." },
+      { status: 500 },
     );
   }
 }

@@ -1,93 +1,101 @@
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { requireSession } from "@/lib/session";
+import { hayChoqueCita } from "@/lib/agenda-server";
+import { intervaloCita } from "@/lib/agenda-core";
 
-type Contexto = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+type Params = { params: Promise<{ id: string }> };
 
-export async function PUT(
-  request: Request,
-  context: Contexto
-) {
-  const session = await auth();
+export async function PUT(request: NextRequest, { params }: Params) {
+  const authResult = await requireSession();
+  if (!authResult.ok) return authResult.response;
 
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
-    );
-  }
-
-  const { id } = await context.params;
-  const citaId = Number(id);
-
-  if (!Number.isInteger(citaId)) {
-    return NextResponse.json(
-      { error: "ID inválido." },
-      { status: 400 }
-    );
-  }
+  const { id } = await params;
 
   try {
     const body = await request.json();
-
-    const estado = String(body.estado ?? "");
-
-    const estadosValidos = [
-      "PENDIENTE",
-      "CONFIRMADA",
-      "FINALIZADA",
-      "CANCELADA",
-    ];
-
-    if (!estadosValidos.includes(estado)) {
-      return NextResponse.json(
-        { error: "Estado inválido." },
-        { status: 400 }
-      );
-    }
-
-    const cita = await prisma.cita.findFirst({
+    const existe = await prisma.cita.findFirst({
       where: {
-        id: citaId,
-        estudioId: session.user.estudioId,
+        id,
+        estudioId: authResult.user.estudioId,
+        eliminadoEn: null,
       },
     });
 
-    if (!cita) {
+    if (!existe) {
       return NextResponse.json(
         { error: "Cita no encontrada." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    const actualizada = await prisma.cita.update({
-      where: {
-        id: citaId,
-      },
+    const fecha = body.fecha ? new Date(body.fecha) : existe.fecha;
+    const duracion = body.duracion ? Number(body.duracion) : existe.duracion;
+    const usuarioId =
+      body.usuarioId !== undefined
+        ? body.usuarioId
+          ? Number(body.usuarioId)
+          : null
+        : existe.usuarioId;
+
+    const { inicio, fin } = intervaloCita(fecha, duracion);
+    const choque = await hayChoqueCita({
+      estudioId: authResult.user.estudioId,
+      usuarioId,
+      inicio,
+      fin,
+      excluirCitaId: id,
+    });
+
+    if (choque) {
+      return NextResponse.json({ error: choque }, { status: 409 });
+    }
+
+    const cita = await prisma.cita.update({
+      where: { id },
       data: {
-        estado: estado as
-          | "PENDIENTE"
-          | "CONFIRMADA"
-          | "FINALIZADA"
-          | "CANCELADA",
+        fecha,
+        duracion,
+        motivo:
+          body.motivo !== undefined
+            ? String(body.motivo).trim() || null
+            : undefined,
+        notas:
+          body.notas !== undefined
+            ? String(body.notas).trim() || null
+            : undefined,
+        estado: body.estado || undefined,
+        usuarioId,
+        tatuajeId:
+          body.tatuajeId !== undefined
+            ? body.tatuajeId
+              ? String(body.tatuajeId)
+              : null
+            : undefined,
       },
-      select: {
-        id: true,
-        estado: true,
+      include: {
+        cliente: { select: { id: true, nombre: true, telefono: true } },
+        tatuaje: {
+          select: {
+            id: true,
+            nombre: true,
+            estado: true,
+            precio: true,
+            zona: true,
+            estilo: true,
+          },
+        },
+        usuario: { select: { id: true, nombre: true } },
       },
     });
 
-    return NextResponse.json(actualizada);
+    return NextResponse.json(cita);
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
       { error: "No se pudo actualizar la cita." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

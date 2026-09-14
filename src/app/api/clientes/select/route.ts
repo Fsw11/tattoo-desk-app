@@ -1,29 +1,19 @@
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET() {
-  const session = await auth();
+import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
 
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "No autorizado" },
-      { status: 401 }
-    );
-  }
+export async function GET() {
+  const authResult = await requireSession();
+  if (!authResult.ok) return authResult.response;
 
   const clientes = await prisma.cliente.findMany({
     where: {
-      estudioId: session.user.estudioId,
+      estudioId: authResult.user.estudioId,
+      eliminadoEn: null,
     },
-    orderBy: {
-      nombre: "asc",
-    },
-    select: {
-      id: true,
-      nombre: true,
-      telefono: true,
-    },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true, telefono: true },
   });
 
   return NextResponse.json(clientes);

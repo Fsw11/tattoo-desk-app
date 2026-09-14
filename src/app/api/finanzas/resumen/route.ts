@@ -158,6 +158,7 @@ export async function GET(request: NextRequest) {
       await prisma.pago.findMany({
         where: {
           estudioId,
+          eliminadoEn: null,
           ...(filtroFecha
             ? {
                 fecha: filtroFecha,

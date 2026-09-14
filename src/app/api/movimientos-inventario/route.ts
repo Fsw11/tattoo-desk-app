@@ -88,7 +88,7 @@ export async function POST(
     const motivo =
       String(body.motivo ?? "").trim() || null;
 
-    let tatuajeId: number | null = null;
+    let tatuajeId: string | null = null;
 
     // ----------------------------------------
     // VALIDACIONES
@@ -191,25 +191,14 @@ export async function POST(
       body.tatuajeId !== null &&
       body.tatuajeId !== ""
     ) {
-      tatuajeId = Number(body.tatuajeId);
-
-      if (!Number.isInteger(tatuajeId)) {
-        return NextResponse.json(
-          {
-            error:
-              "El tatuaje no es válido.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
+      tatuajeId = String(body.tatuajeId);
 
       const tatuaje =
         await prisma.tatuaje.findFirst({
           where: {
             id: tatuajeId,
             estudioId,
+            eliminadoEn: null,
           },
           select: {
             id: true,

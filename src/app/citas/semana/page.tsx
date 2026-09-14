@@ -6,16 +6,16 @@ import {
   formatoDia,
   inicioDeSemana,
   sumarDias,
-} from "@/lib/agenda";
+} from "@/lib/agenda-core";
 
 type Cita = {
-  id: number;
+  id: string;
   fecha: string;
   duracion: number;
   motivo: string | null;
   estado: string;
   cliente: {
-    id: number;
+    id: string;
     nombre: string;
     telefono: string;
   };

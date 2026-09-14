@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
       await prisma.tatuaje.findMany({
         where: {
           estudioId,
+          eliminadoEn: null,
         },
 
         orderBy: {

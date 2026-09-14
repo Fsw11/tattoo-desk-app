@@ -1,14 +1,15 @@
 "use client";
 
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import PageShell from "@/components/ui/PageShell";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Modal from "@/components/ui/Modal";
+import Badge from "@/components/ui/Badge";
+import Card from "@/components/ui/Card";
 
-import {
-  FormEvent,
-  useEffect,
-  useState,
-} from "react";
-
-type InventarioItem = {
+type Item = {
   id: number;
   nombre: string;
   descripcion: string | null;
@@ -18,586 +19,410 @@ type InventarioItem = {
   minimo: string | number | null;
   costo: string | number | null;
   activo: boolean;
-  creadoEn: string;
 };
 
 export default function InventarioPage() {
-  const [items, setItems] =
-    useState<InventarioItem[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [q, setQ] = useState("");
+  const [soloBajo, setSoloBajo] = useState(false);
+  const [seleccionado, setSeleccionado] = useState<Item | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [entradaOpen, setEntradaOpen] = useState(false);
+  const [editando, setEditando] = useState<Item | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [nombre, setNombre] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [cantidad, setCantidad] = useState("0");
+  const [unidad, setUnidad] = useState("pzas");
+  const [minimo, setMinimo] = useState("");
+  const [costo, setCosto] = useState("");
+  const [entradaCantidad, setEntradaCantidad] = useState("");
 
-  const [guardando, setGuardando] =
-    useState(false);
-
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  const [nombre, setNombre] =
-    useState("");
-
-  const [descripcion, setDescripcion] =
-    useState("");
-
-  const [categoria, setCategoria] =
-    useState("");
-
-  const [cantidad, setCantidad] =
-    useState("");
-
-  const [unidad, setUnidad] =
-    useState("");
-
-  const [minimo, setMinimo] =
-    useState("");
-
-  const [costo, setCosto] =
-    useState("");
-
-
-  async function cargarInventario() {
+  async function cargar() {
     try {
       setCargando(true);
-      setError("");
-
-      const respuesta =
-        await fetch("/api/inventario");
-
-      const datos =
-        await respuesta.json();
-
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.error ||
-          "No se pudo cargar el inventario."
-        );
-      }
-
-      setItems(datos);
-
-    } catch (error) {
-      console.error(error);
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Error al cargar inventario."
-      );
-
+      const res = await fetch("/api/inventario");
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error || "Error");
+      setItems(Array.isArray(datos) ? datos : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
       setCargando(false);
     }
   }
 
-
   useEffect(() => {
-    cargarInventario();
+    void cargar();
   }, []);
 
+  const stockBajoCount = items.filter(
+    (i) => i.minimo != null && Number(i.cantidad) <= Number(i.minimo),
+  ).length;
 
-  function limpiarFormulario() {
+  const filtrados = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return items.filter((i) => {
+      if (!i.activo) return false;
+      if (soloBajo) {
+        if (i.minimo == null || Number(i.cantidad) > Number(i.minimo))
+          return false;
+      }
+      if (!term) return true;
+      return (
+        i.nombre.toLowerCase().includes(term) ||
+        (i.categoria || "").toLowerCase().includes(term)
+      );
+    });
+  }, [items, q, soloBajo]);
+
+  function abrirNuevo() {
+    setEditando(null);
     setNombre("");
-    setDescripcion("");
     setCategoria("");
-    setCantidad("");
-    setUnidad("");
+    setCantidad("0");
+    setUnidad("pzas");
     setMinimo("");
     setCosto("");
+    setError("");
+    setModalOpen(true);
   }
 
+  function abrirEditar(item: Item) {
+    setEditando(item);
+    setNombre(item.nombre);
+    setCategoria(item.categoria || "");
+    setCantidad(String(item.cantidad));
+    setUnidad(item.unidad || "");
+    setMinimo(item.minimo != null ? String(item.minimo) : "");
+    setCosto(item.costo != null ? String(item.costo) : "");
+    setError("");
+    setModalOpen(true);
+  }
 
-  async function crearItem(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function guardar(event: FormEvent) {
     event.preventDefault();
-
+    setGuardando(true);
+    setError("");
     try {
-      setGuardando(true);
-      setError("");
-
-      const respuesta =
-        await fetch(
-          "/api/inventario",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              nombre,
-              descripcion,
-              categoria,
-              cantidad,
-              unidad,
-              minimo,
-              costo,
-            }),
-          }
-        );
-
-      const datos =
-        await respuesta.json();
-
-
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.error ||
-          "No se pudo guardar."
-        );
+      if (editando) {
+        const res = await fetch("/api/inventario", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editando.id,
+            nombre: nombre.trim(),
+            categoria: categoria.trim() || null,
+            unidad: unidad.trim() || null,
+            minimo: minimo || null,
+            costo: costo || null,
+          }),
+        });
+        const datos = await res.json();
+        if (!res.ok) throw new Error(datos.error || "Error");
+      } else {
+        const res = await fetch("/api/inventario", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: nombre.trim(),
+            categoria: categoria.trim() || null,
+            cantidad: Number(cantidad) || 0,
+            unidad: unidad.trim() || null,
+            minimo: minimo || null,
+            costo: costo || null,
+          }),
+        });
+        const datos = await res.json();
+        if (!res.ok) throw new Error(datos.error || "Error");
       }
-
-
-      setItems((actuales) => [
-        datos,
-        ...actuales,
-      ]);
-
-
-      limpiarFormulario();
-      setMostrarFormulario(false);
-
-
-    } catch (error) {
-      console.error(error);
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Error al guardar."
-      );
-
+      setModalOpen(false);
+      await cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
       setGuardando(false);
     }
   }
 
-
-  function formatoMoneda(
-    valor: string | number | null
-  ) {
-    return Number(
-      valor ?? 0
-    ).toLocaleString(
-      "es-MX",
-      {
-        style: "currency",
-        currency: "MXN",
-      }
-    );
-  }
-
-
-  function stockBajo(
-    item: InventarioItem
-  ) {
-    if (!item.minimo) {
-      return false;
+  async function registrarEntrada(event: FormEvent) {
+    event.preventDefault();
+    if (!seleccionado) return;
+    setGuardando(true);
+    setError("");
+    try {
+      const res = await fetch("/api/movimientos-inventario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inventarioId: seleccionado.id,
+          tipo: "ENTRADA",
+          cantidad: Number(entradaCantidad),
+          motivo: "Entrada rápida",
+        }),
+      });
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error || "Error");
+      setEntradaOpen(false);
+      setEntradaCantidad("");
+      await cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setGuardando(false);
     }
-
-    return (
-      Number(item.cantidad) <=
-      Number(item.minimo)
-    );
   }
-  const totalMateriales = items.length;
-
-  const materialesStockBajo = items.filter(
-    (item) => stockBajo(item)
-  ).length;
-
-  const valorInventario = items.reduce(
-    (total, item) =>
-      total +
-      Number(item.cantidad ?? 0) *
-      Number(item.costo ?? 0),
-    0
-  );
 
   return (
-  <main className="min-h-screen bg-muted/40 p-4 md:p-6">
-    <div className="mx-auto max-w-7xl space-y-6">
-
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Administración
-          </p>
-
-          <h1 className="text-3xl font-bold">
-            Inventario
-          </h1>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Controla materiales, existencias y movimientos del estudio.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-
+    <PageShell
+      title="Inventario"
+      description={`${items.filter((i) => i.activo).length} materiales`}
+      actions={
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/pos"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-border px-4 text-sm"
+          >
+            Ir a POS
+          </Link>
           <Link
             href="/inventario/movimientos"
-            className="rounded-lg border bg-background px-4 py-2 font-medium transition hover:bg-muted"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius)] border border-border px-4 text-sm"
           >
             Movimientos
           </Link>
-
-          {!mostrarFormulario && (
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                setMostrarFormulario(true);
-              }}
-              className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground"
-            >
-              Nuevo material
-            </button>
-          )}
-
+          <Button onClick={abrirNuevo}>Nuevo material</Button>
         </div>
-      </header>
-
-
-      {/* RESUMEN DEL INVENTARIO */}
-      <section className="grid gap-4 md:grid-cols-3">
-
-        <div className="rounded-xl border bg-background p-5">
-          <p className="text-sm text-muted-foreground">
-            Total de materiales
+      }
+    >
+      {stockBajoCount > 0 && (
+        <Card className="border-warning/40 bg-warning/10">
+          <p className="text-sm font-semibold text-warning">
+            {stockBajoCount} material(es) con stock bajo
           </p>
-
-          <p className="mt-2 text-3xl font-bold">
-            {totalMateriales}
-          </p>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Materiales registrados
-          </p>
-        </div>
-
-
-        <div className="rounded-xl border bg-background p-5">
-          <p className="text-sm text-muted-foreground">
-            Stock bajo
-          </p>
-
-          <p className="mt-2 text-3xl font-bold">
-            {materialesStockBajo}
-          </p>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Requieren atención
-          </p>
-        </div>
-
-
-        <div className="rounded-xl border bg-background p-5">
-          <p className="text-sm text-muted-foreground">
-            Valor estimado
-          </p>
-
-          <p className="mt-2 text-3xl font-bold">
-            {formatoMoneda(valorInventario)}
-          </p>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Valor actual del inventario
-          </p>
-        </div>
-
-      </section>
-
-
-      {mostrarFormulario && (
-        <section className="rounded-xl border bg-background p-6">
-
-          <h2 className="mb-5 text-xl font-semibold">
-            Registrar material
-          </h2>
-
-
-          <form
-            onSubmit={crearItem}
-            className="space-y-5"
-          >
-
-            <div className="grid gap-4 md:grid-cols-2">
-
-              <input
-                placeholder="Nombre"
-                value={nombre}
-                onChange={(e) =>
-                  setNombre(e.target.value)
-                }
-                className="rounded-lg border px-3 py-2"
-                required
-              />
-
-
-              <input
-                placeholder="Categoría"
-                value={categoria}
-                onChange={(e) =>
-                  setCategoria(e.target.value)
-                }
-                className="rounded-lg border px-3 py-2"
-              />
-
-
-              <input
-                type="number"
-                placeholder="Cantidad"
-                value={cantidad}
-                onChange={(e) =>
-                  setCantidad(e.target.value)
-                }
-                className="rounded-lg border px-3 py-2"
-                required
-              />
-
-
-              <input
-                placeholder="Unidad (ml, piezas, cajas)"
-                value={unidad}
-                onChange={(e) =>
-                  setUnidad(e.target.value)
-                }
-                className="rounded-lg border px-3 py-2"
-              />
-
-
-              <input
-                type="number"
-                placeholder="Stock mínimo"
-                value={minimo}
-                onChange={(e) =>
-                  setMinimo(e.target.value)
-                }
-                className="rounded-lg border px-3 py-2"
-              />
-
-
-              <input
-                type="number"
-                placeholder="Costo"
-                value={costo}
-                onChange={(e) =>
-                  setCosto(e.target.value)
-                }
-                className="rounded-lg border px-3 py-2"
-              />
-
-            </div>
-
-
-            <textarea
-              placeholder="Descripción"
-              value={descripcion}
-              onChange={(e) =>
-                setDescripcion(e.target.value)
-              }
-              className="w-full rounded-lg border px-3 py-2"
-            />
-
-
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3 text-red-700">
-                {error}
-              </div>
-            )}
-
-
-            <div className="flex justify-end gap-3">
-
-              <button
-                type="button"
-                onClick={() => {
-                  limpiarFormulario();
-                  setMostrarFormulario(false);
-                }}
-                className="rounded-lg border px-4 py-2"
-              >
-                Cancelar
-              </button>
-
-
-              <button
-                disabled={guardando}
-                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
-              >
-                {guardando
-                  ? "Guardando..."
-                  : "Guardar material"}
-              </button>
-
-            </div>
-
-          </form>
-
-        </section>
+        </Card>
       )}
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Input
+          placeholder="Buscar material o categoría..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="sm:max-w-md"
+        />
+        <Button
+          size="sm"
+          variant={soloBajo ? "primary" : "outline"}
+          onClick={() => setSoloBajo((v) => !v)}
+        >
+          Solo stock bajo
+        </Button>
+      </div>
 
+      {error && !modalOpen && !entradaOpen && (
+        <p className="text-sm text-danger">{error}</p>
+      )}
 
-      <section className="rounded-xl border bg-background">
-        {cargando ? (
-          <div className="p-4 md:p-6">
-            Cargando inventario...
-          </div>
-
-        ) : items.length === 0 ? (
-
-          <div className="p-4 text-muted-foreground md:p-6">
-            No hay materiales registrados.
-          </div>
-
-        ) : (
-
-          <>
-            {/* VISTA MOVIL */}
-            <div className="space-y-3 p-3 md:hidden">
-              {items.map((item) => (
-                <div
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {cargando ? (
+            <p className="text-sm text-muted-foreground">Cargando...</p>
+          ) : filtrados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin resultados</p>
+          ) : (
+            filtrados.map((item) => {
+              const bajo =
+                item.minimo != null &&
+                Number(item.cantidad) <= Number(item.minimo);
+              return (
+                <button
                   key={item.id}
-                  className="rounded-xl border bg-card p-4 shadow-sm"
+                  type="button"
+                  onClick={() => setSeleccionado(item)}
+                  className={`rounded-[var(--radius)] border p-4 text-left transition hover:border-primary ${
+                    seleccionado?.id === item.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card"
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-semibold">
-                        {item.nombre}
-                      </h3>
-
-                      {item.categoria && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {item.categoria}
-                        </p>
-                      )}
-                    </div>
-
-                    {stockBajo(item) ? (
-                      <span className="shrink-0 rounded-full border px-2.5 py-1 text-xs">
-                        Stock bajo
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        Disponible
-                      </span>
-                    )}
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <h3 className="font-semibold">{item.nombre}</h3>
+                    {bajo && <Badge tone="warning">Bajo</Badge>}
                   </div>
-
-                  {item.descripcion && (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      {item.descripcion}
+                  <p className="text-sm">
+                    {Number(item.cantidad)}
+                    {item.unidad ? ` ${item.unidad}` : ""}
+                  </p>
+                  {item.categoria && (
+                    <p className="text-xs text-muted-foreground">
+                      {item.categoria}
                     </p>
                   )}
+                </button>
+              );
+            })
+          )}
+        </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Cantidad
-                      </p>
-                      <p className="mt-1 font-semibold">
-                        {Number(item.cantidad)} {item.unidad || ""}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Costo
-                      </p>
-                      <p className="mt-1 font-semibold">
-                        {formatoMoneda(item.costo)}
-                      </p>
-                    </div>
-                  </div>
+        <div className="rounded-[var(--radius)] border border-border bg-card p-4">
+          {!seleccionado ? (
+            <p className="text-sm text-muted-foreground">
+              Selecciona un material
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold">{seleccionado.nombre}</h2>
+              <dl className="space-y-2 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Stock</dt>
+                  <dd>
+                    {Number(seleccionado.cantidad)}
+                    {seleccionado.unidad
+                      ? ` ${seleccionado.unidad}`
+                      : ""}
+                  </dd>
                 </div>
-              ))}
+                <div>
+                  <dt className="text-muted-foreground">Mínimo</dt>
+                  <dd>
+                    {seleccionado.minimo != null
+                      ? Number(seleccionado.minimo)
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Costo</dt>
+                  <dd>
+                    {seleccionado.costo != null
+                      ? `$${Number(seleccionado.costo).toLocaleString("es-MX")}`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Categoría</dt>
+                  <dd>{seleccionado.categoria || "—"}</dd>
+                </div>
+              </dl>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => abrirEditar(seleccionado)}>
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEntradaCantidad("");
+                    setEntradaOpen(true);
+                  }}
+                >
+                  Entrada rápida
+                </Button>
+                <Link
+                  href="/pos"
+                  className="inline-flex min-h-9 items-center rounded-[var(--radius)] border border-border px-3 text-sm"
+                >
+                  Usar en POS
+                </Link>
+              </div>
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* VISTA ESCRITORIO */}
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-left text-sm">
-                    <th className="px-5 py-3">
-                      Material
-                    </th>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editando ? "Editar material" : "Nuevo material"}
+      >
+        <form onSubmit={guardar} className="space-y-4">
+          <Input
+            label="Nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            required
+          />
+          <Input
+            label="Categoría"
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+          />
+          {!editando && (
+            <Input
+              label="Cantidad inicial"
+              type="number"
+              value={cantidad}
+              onChange={(e) => setCantidad(e.target.value)}
+            />
+          )}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Input
+              label="Unidad"
+              value={unidad}
+              onChange={(e) => setUnidad(e.target.value)}
+            />
+            <Input
+              label="Mínimo"
+              type="number"
+              value={minimo}
+              onChange={(e) => setMinimo(e.target.value)}
+            />
+            <Input
+              label="Costo"
+              type="number"
+              value={costo}
+              onChange={(e) => setCosto(e.target.value)}
+            />
+          </div>
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={guardando}>
+              {guardando ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
-                    <th className="px-5 py-3">
-                      Categoría
-                    </th>
-
-                    <th className="px-5 py-3">
-                      Cantidad
-                    </th>
-
-                    <th className="px-5 py-3">
-                      Costo
-                    </th>
-
-                    <th className="px-5 py-3">
-                      Estado
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b transition-colors hover:bg-muted/50"
-                    >
-                      <td className="px-5 py-4">
-                        <p className="font-semibold">
-                          {item.nombre}
-                        </p>
-
-                        {item.descripcion && (
-                          <p className="text-sm text-muted-foreground">
-                            {item.descripcion}
-                          </p>
-                        )}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {item.categoria || "—"}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {Number(item.cantidad)}{" "}
-                        {item.unidad || ""}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {formatoMoneda(item.costo)}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {stockBajo(item) ? (
-                          <span className="rounded-full border px-3 py-1 text-sm">
-                            Stock bajo
-                          </span>
-                        ) : (
-                          <span className="text-sm">
-                            Disponible
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
-
-    </div>
-  </main>
-);
+      <Modal
+        open={entradaOpen}
+        onClose={() => setEntradaOpen(false)}
+        title={`Entrada · ${seleccionado?.nombre || ""}`}
+        size="sm"
+      >
+        <form onSubmit={registrarEntrada} className="space-y-4">
+          <Input
+            label="Cantidad entrante"
+            type="number"
+            value={entradaCantidad}
+            onChange={(e) => setEntradaCantidad(e.target.value)}
+            required
+            min={0.01}
+            step="any"
+          />
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEntradaOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={guardando}>
+              Registrar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </PageShell>
+  );
 }

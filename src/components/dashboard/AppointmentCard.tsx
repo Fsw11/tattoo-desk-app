@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 type Appointment = {
-  id: number;
+  id: string;
   fecha: Date | string;
   estado: string;
   cliente: {

@@ -28,8 +28,13 @@ model Estudio {
   gastos                Gasto[]
   inventarios           Inventario[]
   movimientosInventario MovimientoInventario[]
+  fotos                 Foto[]
   suscripcion           Suscripcion?
   configuracion         ConfiguracionEstudio?
+  horarios              HorarioEstudio[]
+  bloqueos              BloqueoAgenda[]
+  consentimientos       Consentimiento[]
+  recordatorios         RecordatorioCita[]
 }
 
 // ========================================
@@ -45,6 +50,7 @@ model Usuario {
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
@@ -54,6 +60,7 @@ model Usuario {
   pagos                 Pago[]
   gastos                Gasto[]
   movimientosInventario MovimientoInventario[]
+  bloqueos              BloqueoAgenda[]
 
   @@index([estudioId])
 }
@@ -63,7 +70,7 @@ model Usuario {
 // ========================================
 
 model Cliente {
-  id            Int      @id @default(autoincrement())
+  id            String   @id @default(uuid())
   nombre        String
   telefono      String
   email         String?
@@ -74,18 +81,21 @@ model Cliente {
   notas         String?
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  citas    Cita[]
-  tatuajes Tatuaje[]
-  pagos    Pago[]
-  fotos    Foto[]
+  citas            Cita[]
+  tatuajes         Tatuaje[]
+  pagos            Pago[]
+  fotos            Foto[]
+  consentimientos  Consentimiento[]
 
   @@unique([estudioId, telefono])
   @@index([estudioId])
   @@index([telefono])
+  @@index([estudioId, actualizadoEn])
 }
 
 // ========================================
@@ -93,7 +103,7 @@ model Cliente {
 // ========================================
 
 model Cita {
-  id            Int        @id @default(autoincrement())
+  id            String     @id @default(uuid())
   fecha         DateTime
   duracion      Int        @default(120)
   motivo        String?
@@ -101,18 +111,27 @@ model Cita {
   estado        EstadoCita @default(PENDIENTE)
   creadoEn      DateTime   @default(now())
   actualizadoEn DateTime   @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  clienteId Int
+  clienteId String
   cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  tatuajeId String?
+  tatuaje   Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: SetNull)
 
   usuarioId Int?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
+  consentimientos Consentimiento[]
+  recordatorios   RecordatorioCita[]
+
   @@index([estudioId, fecha])
   @@index([clienteId])
+  @@index([tatuajeId])
+  @@index([estudioId, actualizadoEn])
 }
 
 // ========================================
@@ -120,7 +139,7 @@ model Cita {
 // ========================================
 
 model Tatuaje {
-  id            Int           @id @default(autoincrement())
+  id            String        @id @default(uuid())
   nombre        String
   descripcion   String?
   estilo        String?
@@ -131,23 +150,26 @@ model Tatuaje {
   notas         String?
   creadoEn      DateTime      @default(now())
   actualizadoEn DateTime      @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  clienteId Int
+  clienteId String
   cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   usuarioId Int?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
-  fotos        Foto[]
-  pagos        Pago[]
+  fotos                 Foto[]
+  pagos                 Pago[]
   movimientosInventario MovimientoInventario[]
+  citas                 Cita[]
 
   @@index([estudioId])
   @@index([clienteId])
   @@index([usuarioId])
+  @@index([estudioId, actualizadoEn])
 }
 
 // ========================================
@@ -155,26 +177,30 @@ model Tatuaje {
 // ========================================
 
 model Pago {
-  id       Int        @id @default(autoincrement())
-  monto    Decimal    @db.Decimal(10, 2)
-  concepto String?
-  notas    String?
-  metodo   MetodoPago
-  fecha    DateTime   @default(now())
+  id            String     @id @default(uuid())
+  monto         Decimal    @db.Decimal(10, 2)
+  concepto      String?
+  notas         String?
+  metodo        MetodoPago
+  fecha         DateTime   @default(now())
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  clienteId Int?
+  clienteId String?
   cliente   Cliente? @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
-  tatuajeId Int?
+  tatuajeId String?
   tatuaje   Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: Cascade)
 
   usuarioId Int?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@index([estudioId])
+  @@index([estudioId, actualizadoEn])
 }
 
 // ========================================
@@ -182,13 +208,16 @@ model Pago {
 // ========================================
 
 model Gasto {
-  id          Int            @id @default(autoincrement())
-  concepto    String
-  descripcion String?
-  monto       Decimal        @db.Decimal(10, 2)
-  fecha       DateTime       @default(now())
-  categoria   CategoriaGasto
-  notas       String?
+  id            Int            @id @default(autoincrement())
+  concepto      String
+  descripcion   String?
+  monto         Decimal        @db.Decimal(10, 2)
+  fecha         DateTime       @default(now())
+  categoria     CategoriaGasto
+  notas         String?
+  creadoEn      DateTime       @default(now())
+  actualizadoEn DateTime       @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
@@ -204,22 +233,27 @@ model Gasto {
 // ========================================
 
 model Foto {
-  id          Int      @id @default(autoincrement())
-  url         String
-  descripcion String?
-  tipo        TipoFoto @default(TATUAJE)
-  creadoEn    DateTime @default(now())
+  id            String   @id @default(uuid())
+  url           String
+  descripcion   String?
+  tipo          TipoFoto @default(TATUAJE)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
-  clienteId Int
-  tatuajeId Int?
+  estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
 
-  cliente Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  tatuaje Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: Cascade)
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  tatuajeId String?
+  tatuaje   Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: Cascade)
 
   @@index([estudioId])
   @@index([clienteId])
   @@index([tatuajeId])
+  @@index([estudioId, actualizadoEn])
 }
 
 // ========================================
@@ -238,6 +272,7 @@ model Inventario {
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
+  eliminadoEn   DateTime?
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
@@ -256,12 +291,11 @@ model MovimientoInventario {
   tipo     TipoMovimientoInventario
   cantidad Decimal                  @db.Decimal(10, 2)
 
-  // Costos para análisis financiero
-  costoUnitario Decimal?            @db.Decimal(10, 2)
-  costoTotal    Decimal?            @db.Decimal(10, 2)
+  costoUnitario Decimal? @db.Decimal(10, 2)
+  costoTotal    Decimal? @db.Decimal(10, 2)
 
   motivo   String?
-  fecha    DateTime                 @default(now())
+  fecha    DateTime @default(now())
 
   estudioId Int
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
@@ -269,9 +303,7 @@ model MovimientoInventario {
   inventarioId Int
   inventario   Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
 
-  // Relación opcional para conocer el material usado
-  // específicamente en cada tatuaje
-  tatuajeId Int?
+  tatuajeId String?
   tatuaje   Tatuaje? @relation(fields: [tatuajeId], references: [id], onDelete: SetNull)
 
   usuarioId Int?
@@ -280,6 +312,103 @@ model MovimientoInventario {
   @@index([estudioId])
   @@index([inventarioId])
   @@index([tatuajeId])
+}
+
+// ========================================
+// HORARIO DEL ESTUDIO
+// ========================================
+
+model HorarioEstudio {
+  id        String  @id @default(uuid())
+  diaSemana Int
+  abierto   Boolean @default(true)
+  horaInicio String @default("10:00")
+  horaFin    String @default("20:00")
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  eliminadoEn   DateTime?
+
+  estudioId Int
+  estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  @@unique([estudioId, diaSemana])
+  @@index([estudioId])
+}
+
+// ========================================
+// BLOQUEOS DE AGENDA
+// ========================================
+
+model BloqueoAgenda {
+  id        String   @id @default(uuid())
+  inicio    DateTime
+  fin       DateTime
+  motivo    String?
+  creadoEn  DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  eliminadoEn   DateTime?
+
+  estudioId Int
+  estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  usuarioId Int?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([estudioId, inicio])
+  @@index([usuarioId])
+}
+
+// ========================================
+// CONSENTIMIENTO / WAIVER
+// ========================================
+
+model Consentimiento {
+  id              String   @id @default(uuid())
+  textoPlantilla  String
+  firmaUrl        String
+  firmadoEn       DateTime @default(now())
+  creadoEn        DateTime @default(now())
+  actualizadoEn   DateTime @updatedAt
+  eliminadoEn     DateTime?
+
+  estudioId Int
+  estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  citaId String?
+  cita   Cita? @relation(fields: [citaId], references: [id], onDelete: SetNull)
+
+  @@index([estudioId])
+  @@index([clienteId])
+  @@index([estudioId, actualizadoEn])
+}
+
+// ========================================
+// RECORDATORIOS
+// ========================================
+
+model RecordatorioCita {
+  id            String              @id @default(uuid())
+  canal         CanalRecordatorio   @default(WHATSAPP)
+  estado        EstadoRecordatorio  @default(PENDIENTE)
+  programadoPara DateTime
+  enviadoEn     DateTime?
+  mensaje       String
+  urlWhatsapp   String?
+  creadoEn      DateTime            @default(now())
+  actualizadoEn DateTime            @updatedAt
+
+  estudioId Int
+  estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+
+  citaId String
+  cita   Cita @relation(fields: [citaId], references: [id], onDelete: Cascade)
+
+  @@index([estudioId, estado, programadoPara])
+  @@index([citaId])
 }
 
 // ========================================
@@ -297,8 +426,14 @@ model ConfiguracionEstudio {
   whatsapp      String?
   instagram     String?
 
-  tema           String @default("dark")
+  tema           String @default("system")
   colorPrincipal String @default("#D4AF37")
+  radio          String @default("medio")
+
+  plantillaConsentimiento String?
+  exigirConsentimiento    Boolean @default(true)
+  plantillaRecordatorio   String?
+  horasAntesRecordatorio  Int     @default(24)
 
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
@@ -311,10 +446,15 @@ model ConfiguracionEstudio {
 // ========================================
 
 model Suscripcion {
-  id       Int               @id @default(autoincrement())
-  plan     Plan
-  estado   EstadoSuscripcion
-  creadoEn DateTime          @default(now())
+  id                 Int               @id @default(autoincrement())
+  plan               Plan
+  estado             EstadoSuscripcion
+  iniciaEn           DateTime          @default(now())
+  venceEn            DateTime?
+  pruebaHasta        DateTime?
+  proveedorExternoId String?
+  creadoEn           DateTime          @default(now())
+  actualizadoEn      DateTime          @updatedAt
 
   estudioId Int     @unique
   estudio   Estudio @relation(fields: [estudioId], references: [id], onDelete: Cascade)
@@ -385,4 +525,16 @@ enum EstadoSuscripcion {
   CANCELADA
   VENCIDA
   PRUEBA
+}
+
+enum CanalRecordatorio {
+  WHATSAPP
+  MANUAL
+}
+
+enum EstadoRecordatorio {
+  PENDIENTE
+  ENVIADO
+  CANCELADO
+  FALLIDO
 }

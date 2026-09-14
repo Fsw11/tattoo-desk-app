@@ -5,30 +5,32 @@ import {
   useEffect,
   useState,
 } from "react";
+import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
 
 type Cliente = {
-  id: number;
+  id: string;
   nombre: string;
 };
 
 type Tatuaje = {
-  id: number;
+  id: string;
   nombre: string;
-  clienteId: number;
+  clienteId: string;
 };
 
 type Foto = {
-  id: number;
+  id: string;
   url: string;
   descripcion: string | null;
   tipo: string;
   creadoEn: string;
   cliente: {
-    id: number;
+    id: string;
     nombre: string;
   };
   tatuaje: {
-    id: number;
+    id: string;
     nombre: string;
   } | null;
 };
@@ -170,7 +172,7 @@ export default function FotosPage() {
     }
   }
 
-  async function eliminarFoto(fotoId: number) {
+  async function eliminarFoto(fotoId: string) {
     const confirmar = window.confirm(
       "¿Seguro que deseas eliminar esta foto?"
     );
@@ -252,8 +254,7 @@ export default function FotosPage() {
     tatuajes.filter(
       (tatuaje) =>
         !clienteId ||
-        tatuaje.clienteId ===
-          Number(clienteId)
+        tatuaje.clienteId === clienteId
     );
 
   const tatuajesFiltro =
@@ -373,6 +374,26 @@ export default function FotosPage() {
       setGuardando(true);
       setError("");
 
+      const id = crypto.randomUUID();
+
+      if (!navigator.onLine) {
+        const { localDb } = await import("@/lib/local/db");
+        if (localDb) {
+          await localDb.fotosPendientes.put({
+            id,
+            clienteId,
+            tatuajeId: tatuajeId || null,
+            descripcion: descripcion || null,
+            tipo,
+            blob: archivo,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        limpiar();
+        setError("Foto guardada offline. Se subirá al reconectar.");
+        return;
+      }
+
       const formulario =
         new FormData();
 
@@ -409,22 +430,12 @@ export default function FotosPage() {
                 "application/json",
             },
             body: JSON.stringify({
-              clienteId:
-                Number(clienteId),
-
-              tatuajeId:
-                tatuajeId
-                  ? Number(tatuajeId)
-                  : null,
-
-              url:
-                subidaData.url,
-
+              id,
+              clienteId,
+              tatuajeId: tatuajeId || null,
+              url: subidaData.url,
               tipo,
-
-              descripcion:
-                descripcion ||
-                null,
+              descripcion: descripcion || null,
             }),
           }
         );
@@ -473,20 +484,18 @@ export default function FotosPage() {
             </p>
           </div>
 
-          <button
-            onClick={() =>
-              setMostrarFormulario(true)
-            }
-            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground"
-          >
+          <Button onClick={() => setMostrarFormulario(true)}>
             Nueva foto
-          </button>
+          </Button>
         </header>
 
 
-        {mostrarFormulario && (
-          <section className="rounded-xl border bg-background p-6">
-
+        <Modal
+          open={mostrarFormulario}
+          onClose={() => setMostrarFormulario(false)}
+          title="Nueva foto"
+          size="lg"
+        >
             <form
               onSubmit={crearFoto}
               className="space-y-5"
@@ -706,25 +715,30 @@ export default function FotosPage() {
               )}
 
 
-              <button
-                type="submit"
-                disabled={
-                  guardando ||
-                  !archivo ||
-                  !clienteId
-                }
-                className="rounded-lg bg-primary px-4 py-2 text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {guardando
-                  ? "Guardando..."
-                  : "Guardar foto"}
-              </button>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMostrarFormulario(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    guardando ||
+                    !archivo ||
+                    !clienteId
+                  }
+                >
+                  {guardando
+                    ? "Guardando..."
+                    : "Guardar foto"}
+                </Button>
+              </div>
 
             </form>
-
-          </section>
-        )}
-
+        </Modal>
 
         <div className="mb-5">
           <label className="mb-1 block text-sm font-medium">

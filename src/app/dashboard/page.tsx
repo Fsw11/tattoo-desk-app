@@ -64,12 +64,14 @@ export default async function DashboardPage() {
     proximasCitas,
     configuracion,
     suscripcion,
+    recordatorios,
   ] = await Promise.all([
 
     // CLIENTES
     prisma.cliente.count({
       where: {
         estudioId,
+        eliminadoEn: null,
       },
     }),
 
@@ -78,6 +80,7 @@ export default async function DashboardPage() {
     prisma.cita.count({
       where: {
         estudioId,
+        eliminadoEn: null,
         estado: "PENDIENTE",
       },
     }),
@@ -87,6 +90,7 @@ export default async function DashboardPage() {
     prisma.cita.count({
       where: {
         estudioId,
+        eliminadoEn: null,
         fecha: {
           gte: inicioHoy,
           lt: finHoy,
@@ -99,6 +103,7 @@ export default async function DashboardPage() {
     prisma.tatuaje.count({
       where: {
         estudioId,
+        eliminadoEn: null,
         estado: {
           in: [
             "PENDIENTE",
@@ -114,6 +119,7 @@ export default async function DashboardPage() {
       where: {
         estudioId,
         activo: true,
+        eliminadoEn: null,
         cantidad: {
           lte: prisma.inventario.fields.minimo,
         },
@@ -126,6 +132,7 @@ export default async function DashboardPage() {
       where: {
         estudioId,
         activo: true,
+        eliminadoEn: null,
         cantidad: {
           lte: prisma.inventario.fields.minimo,
         },
@@ -141,6 +148,7 @@ export default async function DashboardPage() {
     prisma.cita.findMany({
       where: {
         estudioId,
+        eliminadoEn: null,
         fecha: {
           gte: ahora,
         },
@@ -167,6 +175,23 @@ export default async function DashboardPage() {
     prisma.suscripcion.findUnique({
       where: {
         estudioId,
+      },
+    }),
+
+    // RECORDATORIOS PENDIENTES
+    prisma.recordatorioCita.findMany({
+      where: {
+        estudioId,
+        estado: "PENDIENTE",
+      },
+      orderBy: { programadoPara: "asc" },
+      take: 8,
+      include: {
+        cita: {
+          include: {
+            cliente: { select: { nombre: true, telefono: true } },
+          },
+        },
       },
     }),
 
@@ -273,6 +298,13 @@ export default async function DashboardPage() {
             />
 
             <QuickAction
+              titulo="Consentimiento"
+              descripcion="Firmar waiver"
+              href="/consentimiento"
+              icono="✍️"
+            />
+
+            <QuickAction
               titulo="Inventario"
               descripcion="Materiales y stock"
               href="/inventario"
@@ -289,6 +321,43 @@ export default async function DashboardPage() {
           </div>
 
         </section>
+
+
+        {recordatorios.length > 0 && (
+          <section className="rounded-2xl border bg-background p-4 sm:p-5 md:p-6">
+            <h2 className="mb-2 text-xl font-semibold">Avisos pendientes</h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Recordatorios de cita listos para enviar por WhatsApp
+            </p>
+            <div className="space-y-3">
+              {recordatorios.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {r.cita.cliente.nombre}
+                    </p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {r.mensaje}
+                    </p>
+                  </div>
+                  {r.urlWhatsapp && (
+                    <a
+                      href={r.urlWhatsapp}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+                    >
+                      Abrir WhatsApp
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
 
         {/* DOS COLUMNAS */}

@@ -156,7 +156,7 @@ export default function MovimientosInventarioPage() {
 
           motivo,
 
-          tatuajeId: tipo === "SALIDA" && tatuajeId ? Number(tatuajeId) : null,
+          tatuajeId: tipo === "SALIDA" && tatuajeId ? tatuajeId : null,
         }),
       });
 

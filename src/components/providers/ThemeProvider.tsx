@@ -5,14 +5,13 @@ import {
   useEffect,
   useState,
 } from "react";
-
-import {
-  EVENTO_TEMA_CAMBIADO,
-} from "./theme-events";
+import { aplicarTokensTema } from "@/lib/theme";
+import { EVENTO_TEMA_CAMBIADO } from "./theme-events";
 
 type ConfiguracionTema = {
   tema?: string | null;
   colorPrincipal?: string | null;
+  radio?: string | null;
 };
 
 type ThemeProviderProps = {
@@ -24,97 +23,47 @@ export default function ThemeProvider({
   children,
   configuracion,
 }: ThemeProviderProps) {
-
-  const [tema, setTema] = useState(
-    configuracion?.tema || "dark"
+  const [tema, setTema] = useState(configuracion?.tema || "system");
+  const [colorPrincipal, setColorPrincipal] = useState(
+    configuracion?.colorPrincipal || "#D4AF37",
   );
-
-  const [colorPrincipal, setColorPrincipal] =
-    useState(
-      configuracion?.colorPrincipal ||
-      "#D4AF37"
-    );
-
-
-  function aplicarConfiguracion(
-    nuevoTema: string,
-    nuevoColor: string
-  ) {
-
-    const root =
-      document.documentElement;
-
-    if (nuevoTema === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-
-    root.style.setProperty(
-      "--color-principal",
-      nuevoColor
-    );
-
-  }
-
+  const [radio, setRadio] = useState(configuracion?.radio || "medio");
 
   useEffect(() => {
-
-    aplicarConfiguracion(
-      tema,
-      colorPrincipal
-    );
-
-  }, [
-    tema,
-    colorPrincipal,
-  ]);
-
+    aplicarTokensTema({ tema, colorPrincipal, radio });
+  }, [tema, colorPrincipal, radio]);
 
   useEffect(() => {
-
-    function manejarCambio(
-      event: Event
-    ) {
-
-      const customEvent =
-        event as CustomEvent<{
-          tema?: string;
-          colorPrincipal?: string;
-        }>;
-
-      const nuevoTema =
-        customEvent.detail?.tema ||
-        tema;
-
-      const nuevoColor =
-        customEvent.detail?.colorPrincipal ||
-        colorPrincipal;
-
-      setTema(nuevoTema);
-      setColorPrincipal(nuevoColor);
-
+    function onSystemChange() {
+      if (tema === "system") {
+        aplicarTokensTema({ tema, colorPrincipal, radio });
+      }
     }
 
-    window.addEventListener(
-      EVENTO_TEMA_CAMBIADO,
-      manejarCambio
-    );
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", onSystemChange);
+    return () => media.removeEventListener("change", onSystemChange);
+  }, [tema, colorPrincipal, radio]);
 
-    return () => {
+  useEffect(() => {
+    function manejarCambio(event: Event) {
+      const customEvent = event as CustomEvent<{
+        tema?: string;
+        colorPrincipal?: string;
+        radio?: string;
+      }>;
 
-      window.removeEventListener(
-        EVENTO_TEMA_CAMBIADO,
-        manejarCambio
-      );
+      if (customEvent.detail?.tema) setTema(customEvent.detail.tema);
+      if (customEvent.detail?.colorPrincipal) {
+        setColorPrincipal(customEvent.detail.colorPrincipal);
+      }
+      if (customEvent.detail?.radio) setRadio(customEvent.detail.radio);
+    }
 
-    };
-
-  }, [
-    tema,
-    colorPrincipal,
-  ]);
-
+    window.addEventListener(EVENTO_TEMA_CAMBIADO, manejarCambio);
+    return () =>
+      window.removeEventListener(EVENTO_TEMA_CAMBIADO, manejarCambio);
+  }, []);
 
   return <>{children}</>;
 }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import OfflineBanner from "./OfflineBanner";
 
 type Configuracion = {
   logoUrl: string | null;
@@ -28,34 +29,20 @@ export default function AppShell({
   configuracion,
   usuario,
 }: AppShellProps) {
-
   const pathname = usePathname();
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/registro") {
     return <>{children}</>;
   }
 
   return (
     <div className="flex min-h-[100dvh] w-full overflow-x-hidden">
-
-      <Sidebar
-        configuracion={configuracion}
-        usuario={usuario}
-      />
-
+      <Sidebar configuracion={configuracion} usuario={usuario} />
       <div className="flex min-w-0 flex-1 flex-col">
-
-        <Header
-          configuracion={configuracion}
-          usuario={usuario}
-        />
-
-        <main className="min-w-0 flex-1 pt-16 lg:pt-0">
-          {children}
-        </main>
-
+        <Header configuracion={configuracion} usuario={usuario} />
+        <OfflineBanner />
+        <main className="min-w-0 flex-1 pt-16 lg:pt-0">{children}</main>
       </div>
-
     </div>
   );
 }

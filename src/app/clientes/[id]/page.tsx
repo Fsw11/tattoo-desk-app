@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 type Cliente = {
-  id: number;
+  id: string;
   nombre: string;
   telefono: string;
   email: string | null;
@@ -18,7 +18,7 @@ type Cliente = {
   actualizadoEn: string;
 
   citas: {
-    id: number;
+    id: string;
     fecha: string;
     duracion: number;
     motivo: string | null;
@@ -27,7 +27,7 @@ type Cliente = {
   }[];
 
   tatuajes: {
-    id: number;
+    id: string;
     nombre: string;
     descripcion: string | null;
     estilo: string | null;
@@ -40,13 +40,13 @@ type Cliente = {
   }[];
 
   pagos: {
-    id: number;
+    id: string;
     monto: string | number;
     concepto: string | null;
     notas: string | null;
     metodo: string;
     fecha: string;
-    tatuajeId: number | null;
+    tatuajeId: string | null;
   }[];
 };
 
